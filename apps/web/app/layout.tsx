@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { BottomNav } from "../components/BottomNav";
 
 export const metadata: Metadata = {
   title: "Cademy — Tools Akademik Mahasiswa",
@@ -31,18 +32,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen bg-brand-paper font-body text-brand-navy antialiased selection:bg-brand-yellow selection:text-black">
-        <header className="sticky top-0 z-50 border-b-[3px] border-black bg-white px-4 py-3 sm:px-6">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
-            <a href="/" aria-label="Cademy Home" className="group flex items-center gap-2">
-              <span aria-hidden className="flex h-10 w-10 items-center justify-center rounded-xl border-[3px] border-black bg-brand-blue text-white shadow-brutal transition-colors group-hover:bg-brand-yellow group-hover:text-black">
+        <header className="pt-safe fixed top-0 left-0 right-0 z-50 h-16 border-b-[3px] border-black bg-[#EAF5FC]/90 shadow-[0_4px_0px_#000000] backdrop-blur-xl">
+          <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
+            <a href="/" aria-label="Cademy Home" className="group flex items-center gap-2.5">
+              <span aria-hidden className="flex h-11 w-11 items-center justify-center rounded border-[3px] border-black bg-brand-blue text-white shadow-[2px_2px_0px_#000000] transition-colors group-hover:bg-brand-yellow group-hover:text-black">
                 <span className="material-symbols-outlined text-[24px]">school</span>
               </span>
-              <span className="leading-none">
-                <span className="block font-display text-xl font-extrabold tracking-tight sm:text-2xl">
+              <span className="flex flex-col leading-none">
+                <span className="font-label text-[11px] font-extrabold uppercase tracking-[0.08em] text-brand-blue">
                   Cademy
                 </span>
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-brand-muted">
-                  v2.4 Comic Suite
+                <span className="font-display text-xl font-bold tracking-tight text-brand-navy">
+                  Tools Akademik
                 </span>
               </span>
             </a>
@@ -64,24 +65,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   type="submit"
                   aria-label="Cari tools"
                   title="Cari tools"
-                  className="brutal-press flex h-10 w-10 items-center justify-center rounded-full border-[3px] border-black bg-brand-yellow shadow-brutal transition-colors hover:bg-yellow-300 focus:outline-none"
+                  className="brutal-press flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-black bg-white text-brand-muted shadow-[2px_2px_0px_#000000] transition-colors hover:text-brand-navy focus:outline-none"
                 >
-                  <svg aria-hidden className="h-5 w-5 text-black" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <span aria-hidden className="material-symbols-outlined text-[22px]">
+                    search
+                  </span>
                 </button>
               </form>
               <a
-                href="/tools"
-                className="brutal-press hidden h-10 items-center justify-center rounded-xl border-[3px] border-black bg-brand-blue px-4 text-xs font-bold uppercase tracking-wider text-white shadow-[3px_3px_0px_#000000] transition-colors hover:bg-brand-navy sm:inline-flex"
+                href="/about"
+                aria-label="Profil"
+                title="Profil"
+                className="hidden h-8 w-8 items-center justify-center rounded-full border-2 border-black bg-brand-blue text-white shadow-[2px_2px_0px_#000000] transition-colors hover:bg-brand-navy sm:inline-flex"
               >
-                Mulai
+                <span aria-hidden className="material-symbols-outlined text-[18px]">
+                  person
+                </span>
               </a>
             </div>
           </div>
         </header>
-        <main className="w-full">{children}</main>
-        <footer className="mt-12 border-t-[3px] border-black bg-white px-4 py-8 sm:px-6">
+        <main className="w-full pb-20 pt-16 md:pb-0">{children}</main>
+        <footer className="mt-12 border-t-[3px] border-black bg-white px-4 pb-24 pt-8 sm:px-6 md:pb-8">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 md:flex-row">
             <div className="flex items-center gap-3 text-center sm:text-left">
               <span aria-hidden className="flex h-8 w-8 items-center justify-center rounded-lg border-[3px] border-black bg-brand-yellow text-sm font-bold text-black shadow-[2px_2px_0px_#000000]">
@@ -104,15 +109,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <a href="/about#privasi-ketentuan" className="underline decoration-2 underline-offset-2 hover:text-brand-blue">
                 Privasi
               </a>
+              <a href="/about#kontak" className="underline decoration-2 underline-offset-2 hover:text-brand-blue">
+                Kontak
+              </a>
               <a
                 href="/tools"
-                className="rounded border-2 border-black bg-brand-blue px-2.5 py-1 text-white shadow-[2px_2px_0px_#000000] hover:bg-brand-navy"
+                className="rounded border-2 border-black bg-brand-blue px-2.5 py-1 text-white shadow-[2px_2px_0px_#000000] transition-colors hover:bg-brand-navy"
               >
                 Direktori Tools
               </a>
             </nav>
           </div>
         </footer>
+        <BottomNav />
       </body>
     </html>
   );

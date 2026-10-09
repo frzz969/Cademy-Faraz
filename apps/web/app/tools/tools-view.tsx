@@ -9,6 +9,7 @@ import {
   type Tool,
   type ToolCategory,
 } from "@cademy/tool-registry";
+import { CategoryPill, CategoryTitle } from "@cademy/ui";
 
 type Cat = ToolCategory | "all";
 
@@ -131,21 +132,26 @@ export function ToolsView() {
         </div>
         <div ref={chipsRef} id="chip-kategori" className={`no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 py-1 ${showFilters ? "" : "hidden"}`}>
           {categories.map((c) => (
-            <button
+            <CategoryPill
               key={c.id}
-              type="button"
+              active={cat === c.id}
               onClick={() => setCat(c.id)}
-              className={
-                cat === c.id
-                  ? "whitespace-nowrap rounded-full border-[3px] border-black bg-[#0E4A6E] px-4 py-2 font-body text-xs font-bold text-[#FFFFFF] shadow-[4px_4px_0px_#000000]"
-                  : "whitespace-nowrap rounded-full border-[3px] border-black bg-[#FFFFFF] px-4 py-2 font-body text-xs font-bold text-[#0B2E4B] shadow-[4px_4px_0px_#000000] transition-transform active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-              }
+              aria-pressed={cat === c.id}
             >
               {c.id === "all" ? `Semua (${tools.length})` : c.label}
-            </button>
+            </CategoryPill>
           ))}
         </div>
       </section>
+
+      {cat !== "all" && (
+        <CategoryTitle
+          as="h2"
+          label={categories.find((c) => c.id === cat)?.label ?? cat}
+          count={filtered.length}
+          className="mb-4"
+        />
+      )}
 
       {filtered.length === 0 ? (
         <div className="my-6 flex flex-col items-center justify-center rounded-2xl border-[3px] border-black bg-[#FFFFFF] p-10 text-center shadow-[4px_4px_0px_#000000]">
@@ -182,7 +188,11 @@ export function ToolsView() {
                       {t.badge ?? badgeLabel[t.status]}
                     </span>
                   </div>
-                  <h2 className="mt-1 font-display text-xl font-bold text-[#0B2E4B]">{t.name}</h2>
+                  <h2 className="mt-1 font-display text-xl font-bold text-[#0B2E4B]">
+                    <span className="inline-block rounded-lg border-[3px] border-black bg-[#D9EDFA] px-2 py-1 text-[#0B2E4B] shadow-[4px_4px_0px_#000000]">
+                      {t.name}
+                    </span>
+                  </h2>
                   <p className="line-clamp-3 font-body text-sm text-[#4E7390]">{t.description}</p>
                   {(t.meta ?? []).length > 0 && (
                     <div className="flex flex-wrap gap-1.5 pt-1">
@@ -265,7 +275,7 @@ export function ToolsView() {
 
       <div
         aria-live="polite"
-        className={`fixed bottom-6 left-4 right-4 z-50 flex items-center gap-3 rounded-2xl border-[3px] border-black bg-[#0B2E4B] p-4 text-[#FFFFFF] shadow-[4px_4px_0px_#000000] transition-all sm:left-auto sm:w-80 ${toast ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"}`}
+        className={`fixed bottom-20 left-4 right-4 z-40 flex items-center gap-3 rounded-2xl border-[3px] border-black bg-[#0B2E4B] p-4 text-[#FFFFFF] shadow-[4px_4px_0px_#000000] transition-all sm:bottom-6 sm:left-auto sm:w-80 ${toast ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"}`}
       >
         <span className="material-symbols-outlined text-2xl text-[#FFD02B]">{toast?.icon ?? "bookmark"}</span>
         <p className="font-body text-sm leading-tight">{toast?.msg ?? "Pilihan Anda telah diperbarui."}</p>

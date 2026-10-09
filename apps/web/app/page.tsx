@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { categories, getPopularTools, tools } from "@cademy/tool-registry";
+import { CategoryPill } from "@cademy/ui";
 
 export const metadata: Metadata = {
   title: "Cademy — Tools Akademik Gratis untuk Mahasiswa Indonesia",
@@ -66,18 +67,18 @@ export default function HomePage() {
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="mr-1 text-[11px] font-bold uppercase tracking-wider text-[#4E7390]">Filter:</span>
-                <Link href="/tools" className="rounded-full border-[3px] border-black bg-[#0E4A6E] px-3 py-1 font-body text-xs font-bold text-white shadow-[2px_2px_0px_#000000] transition-transform active:translate-x-0.5 active:translate-y-0.5 active:shadow-none">
+                <CategoryPill href="/tools" active>
                   Semua
-                </Link>
-                <Link href="/tools?cat=writing" className="rounded-full border-[3px] border-black bg-[#FFFFFF] px-3 py-1 font-body text-xs font-bold text-[#0B2E4B] shadow-[2px_2px_0px_#000000] transition-colors hover:bg-[#D9EDFA]">
+                </CategoryPill>
+                <CategoryPill href="/tools?cat=writing">
                   Penulisan
-                </Link>
-                <Link href="/tools?cat=study" className="rounded-full border-[3px] border-black bg-[#FFFFFF] px-3 py-1 font-body text-xs font-bold text-[#0B2E4B] shadow-[2px_2px_0px_#000000] transition-colors hover:bg-[#D9EDFA]">
+                </CategoryPill>
+                <CategoryPill href="/tools?cat=study">
                   Studi
-                </Link>
-                <Link href="/tools?cat=research" className="rounded-full border-[3px] border-black bg-[#FFFFFF] px-3 py-1 font-body text-xs font-bold text-[#0B2E4B] shadow-[2px_2px_0px_#000000] transition-colors hover:bg-[#D9EDFA]">
+                </CategoryPill>
+                <CategoryPill href="/tools?cat=research">
                   Riset
-                </Link>
+                </CategoryPill>
               </div>
             </form>
             <p className="mt-1 flex items-center gap-3 font-body text-xs font-bold text-[#4E7390]">
@@ -158,7 +159,11 @@ export default function HomePage() {
                       {t.badge ?? (t.status === "external" ? "Eksternal" : t.status === "beta" ? "Beta" : t.status === "coming-soon" ? "Segera Hadir" : "Tersedia")}
                     </span>
                   </div>
-                  <h3 className="mb-2 font-display text-xl font-bold text-[#0B2E4B]">{t.name}</h3>
+                  <h3 className="mb-2 font-display text-xl font-bold text-[#0B2E4B]">
+                    <span className="inline-block rounded-lg border-[3px] border-black bg-[#D9EDFA] px-2 py-1 text-[#0B2E4B] shadow-[4px_4px_0px_#000000]">
+                      {t.name}
+                    </span>
+                  </h3>
                   <p className="font-body text-xs font-medium leading-relaxed text-[#4E7390] sm:text-sm">{t.description}</p>
                 </div>
                 <div className="mt-2 border-t-[2px] border-dashed border-[#D9EDFA] pt-6">

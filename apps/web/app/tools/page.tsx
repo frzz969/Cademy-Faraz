@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function ToolsPage() {
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 pb-16 pt-6 sm:px-6">
+    <div className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 md:pb-16">
       <Suspense fallback={<p className="py-10 font-body text-sm text-[#4E7390]">Memuat direktori...</p>}>
         <ToolsView />
       </Suspense>

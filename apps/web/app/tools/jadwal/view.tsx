@@ -20,6 +20,8 @@ interface Agenda {
   jam: string;
   lokasi: string;
   tuntas: boolean;
+  /** inisial penanggung jawab (avatar), mis. dosen pembimbing */
+  inisial?: string;
 }
 
 interface Tugas {
@@ -96,6 +98,7 @@ const DEFAULT_AGENDA: Agenda[] = [
     badgeTone: "confirm",
     jam: "10:00 WIB",
     lokasi: "R. Dosen 302",
+    inisial: "SD",
     tuntas: false,
   },
   {
@@ -109,6 +112,7 @@ const DEFAULT_AGENDA: Agenda[] = [
     badgeTone: "danger",
     jam: "23:59 WIB",
     lokasi: "Portal Akademik",
+    inisial: "SA",
     tuntas: false,
   },
   {
@@ -122,6 +126,7 @@ const DEFAULT_AGENDA: Agenda[] = [
     badgeTone: "room",
     jam: "14:30 WIB",
     lokasi: "Teman Sejawat",
+    inisial: "DN",
     tuntas: false,
   },
 ];
@@ -213,8 +218,24 @@ function dotPrioritas(p: Prioritas): string {
   return "bg-brand-muted";
 }
 
+/** Warna teks label prioritas (referensi jadwal_task_board: tinggi=brick, sedang=navy, normal=muted). */
+function labelPrioritas(p: Prioritas): string {
+  if (p === "tinggi") return "text-brand-brick";
+  if (p === "sedang") return "text-brand-navy";
+  return "text-brand-muted";
+}
+
+/** Ribbon tag kartu kanban: kunyi untuk tag revisi/lampiran, sisanya panel sky. */
+function tagTone(tag: string): string {
+  return tag === "REVISI SEMHAS" || tag === "LAMPIRAN"
+    ? "bg-brand-yellow text-brand-navy"
+    : "bg-brand-panel text-brand-navy";
+}
+
+/** Badge agenda: confirm=panel/teks biru, danger=putih/teks brick, room=panel/teks navy. */
 function badgeAgenda(tone: Agenda["badgeTone"]): string {
-  if (tone === "danger") return "bg-brand-brick text-white";
+  if (tone === "danger") return "bg-white text-brand-brick";
+  if (tone === "confirm") return "bg-brand-panel text-brand-blue";
   return "bg-brand-panel text-brand-navy";
 }
 
@@ -463,43 +484,56 @@ export default function JadwalView() {
   const renderKartu = (t: Tugas): React.ReactNode => (
     <article
       key={t.id}
-      className="flex flex-col gap-2 rounded-xl border-[3px] border-black bg-white p-3 shadow-brutal"
+      className="flex flex-col gap-2 rounded-2xl border-[3px] border-black bg-white p-3 shadow-brutal"
     >
       <div className="flex items-start justify-between gap-2">
         <span
-          className={`rounded-full border-[2px] border-black px-2 py-0.5 font-label text-[11px] font-extrabold uppercase tracking-wide shadow-[1px_1px_0px_#000000] ${
-            t.prioritas === "sedang" || t.tag === "REVISI SEMHAS"
-              ? "bg-brand-yellow text-black"
-              : "bg-brand-panel text-brand-navy"
-          }`}
+          className={`rounded-full border-[3px] border-black px-2 py-0.5 font-label text-[11px] font-extrabold uppercase tracking-wider shadow-[1px_1px_0px_#000000] ${tagTone(t.tag)}`}
         >
           {t.tag}
         </span>
-        <span
-          className={`h-2.5 w-2.5 rounded-full border border-black ${dotPrioritas(t.prioritas)}`}
-          title={t.prioritas}
-        />
+        {t.status === "done" ? (
+          <span aria-hidden className="material-symbols-outlined text-[18px] text-brand-blue">
+            verified
+          </span>
+        ) : (
+          <span
+            aria-hidden
+            className="material-symbols-outlined cursor-grab text-[18px] text-brand-muted"
+          >
+            drag_indicator
+          </span>
+        )}
       </div>
       <p
-        className={`font-body text-[15px] font-bold leading-snug text-brand-navy ${
+        className={`font-body text-base font-medium leading-snug text-brand-navy ${
           t.status === "done" ? "line-through opacity-70" : ""
         }`}
       >
         {t.judul}
       </p>
       {t.deskripsi ? (
-        <p className="font-body text-xs leading-snug text-brand-muted">{t.deskripsi}</p>
+        <p className="font-body text-sm leading-snug text-brand-muted">{t.deskripsi}</p>
       ) : null}
       {t.status === "doing" && (
-        <div className="flex flex-col gap-1">
-          <div className="h-2.5 w-full overflow-hidden rounded-full border-2 border-black bg-brand-panel">
+        <>
+          <div className="my-1 h-2 w-full overflow-hidden rounded-full border-2 border-black bg-brand-panel shadow-[1px_1px_0px_#000000]">
             <div
               className="h-full bg-brand-blue transition-all"
               style={{ width: `${t.progres}%` }}
             />
           </div>
-          <label className="flex items-center justify-between font-label text-[11px] font-bold text-brand-muted">
-            <span>{t.progres}% selesai</span>
+          <div className="flex items-center justify-between pt-1">
+            <span className="font-label text-xs font-bold text-brand-blue">{t.progres}% Selesai</span>
+            <span className="flex items-center gap-1 font-label text-xs text-brand-muted">
+              <span aria-hidden className="material-symbols-outlined text-[15px]">
+                chat
+              </span>
+              {t.catatan} Catatan
+            </span>
+          </div>
+          <label className="flex items-center gap-2">
+            <span className="sr-only">Progres {t.judul}</span>
             <input
               type="range"
               min={0}
@@ -509,89 +543,83 @@ export default function JadwalView() {
                 ubahProgres(t.id, Number(e.target.value))
               }
               aria-label={`Progres ${t.judul}`}
-              className="h-2 w-24 cursor-pointer accent-[#0E4A6E]"
+              className="h-2 w-full cursor-pointer accent-[#0E4A6E]"
             />
           </label>
+        </>
+      )}
+      {t.status === "done" ? (
+        <span className="font-label text-xs text-brand-muted">
+          {t.deadline || "Tuntas"}
+        </span>
+      ) : (
+        <div className="flex items-center justify-between pt-1">
+          <span className="flex items-center gap-1 font-label text-xs text-brand-muted">
+            <span aria-hidden className="material-symbols-outlined text-[15px]">
+              event
+            </span>
+            {t.deadline}
+          </span>
+          <span
+            className={`h-2 w-2 rounded-full ${dotPrioritas(t.prioritas)}`}
+            title={t.prioritas}
+          />
         </div>
       )}
-      <div className="flex items-center justify-between border-t-2 border-black/10 pt-2">
-        <span className="flex items-center gap-1 font-label text-xs font-bold text-brand-muted">
-          <span aria-hidden className="material-symbols-outlined text-[15px]">
-            event
-          </span>
-          {t.deadline}
-        </span>
-        {t.status === "doing" ? (
-          <span className="flex items-center gap-1 font-label text-xs font-bold text-brand-muted">
-            <span aria-hidden className="material-symbols-outlined text-[15px]">
-              chat
-            </span>
-            {t.catatan} Catatan
-          </span>
-        ) : t.status === "done" ? (
-          <span
-            aria-hidden
-            className="material-symbols-outlined text-[18px] text-brand-blue"
+      {t.status !== "done" && (
+        <div className="flex items-center gap-1.5 border-t-2 border-black/10 pt-2">
+          <button
+            type="button"
+            onClick={() => geserStatus(t.id, -1)}
+            disabled={t.status === "todo"}
+            aria-label={`Mundur: ${t.judul}`}
+            className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-black bg-white text-brand-navy shadow-[2px_2px_0px_#000000] transition-all hover:bg-brand-panel active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-30"
           >
-            verified
-          </span>
-        ) : null}
-      </div>
-      <div className="flex items-center gap-1.5 pt-1">
-        <button
-          type="button"
-          onClick={() => geserStatus(t.id, -1)}
-          disabled={t.status === "todo"}
-          aria-label={`Mundur: ${t.judul}`}
-          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-black bg-white text-brand-navy shadow-[2px_2px_0px_#000000] transition-all hover:bg-brand-panel active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-30"
-        >
-          <span aria-hidden className="material-symbols-outlined text-[18px]">
-            chevron_left
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() => geserStatus(t.id, 1)}
-          disabled={t.status === "done"}
-          aria-label={`Maju: ${t.judul}`}
-          className="flex h-8 flex-1 items-center justify-center gap-1 rounded-full border-2 border-black bg-brand-blue px-2 font-label text-[11px] font-extrabold uppercase text-white shadow-[2px_2px_0px_#000000] transition-all hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-30"
-        >
-          {t.status === "todo" ? (
-            <>
-              Kerjakan
-              <span aria-hidden className="material-symbols-outlined text-[16px]">
-                arrow_forward
-              </span>
-            </>
-          ) : t.status === "doing" ? (
-            <>
-              Selesaikan
-              <span aria-hidden className="material-symbols-outlined text-[16px]">
-                check
-              </span>
-            </>
-          ) : (
-            "Tuntas"
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => hapusTugas(t.id)}
-          aria-label={`Hapus: ${t.judul}`}
-          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-black bg-brand-brick text-white shadow-[2px_2px_0px_#000000] transition-all hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-        >
-          <span aria-hidden className="material-symbols-outlined text-[18px]">
-            delete
-          </span>
-        </button>
-      </div>
+            <span aria-hidden className="material-symbols-outlined text-[18px]">
+              chevron_left
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => geserStatus(t.id, 1)}
+            aria-label={`Maju: ${t.judul}`}
+            className="flex h-8 flex-1 items-center justify-center gap-1 rounded-full border-2 border-black bg-brand-blue px-2 font-label text-[11px] font-extrabold uppercase text-white shadow-[2px_2px_0px_#000000] transition-all hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+          >
+            {t.status === "todo" ? (
+              <>
+                Kerjakan
+                <span aria-hidden className="material-symbols-outlined text-[16px]">
+                  arrow_forward
+                </span>
+              </>
+            ) : (
+              <>
+                Selesaikan
+                <span aria-hidden className="material-symbols-outlined text-[16px]">
+                  check
+                </span>
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => hapusTugas(t.id)}
+            aria-label={`Hapus: ${t.judul}`}
+            className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-black bg-brand-brick text-white shadow-[2px_2px_0px_#000000] transition-all hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+          >
+            <span aria-hidden className="material-symbols-outlined text-[18px]">
+              delete
+            </span>
+          </button>
+        </div>
+      )}
     </article>
   );
 
-  const kolom: { status: Status; hint: string }[] = [
-    { status: "todo", hint: "Antrian awal" },
-    { status: "doing", hint: "Fokus aktif" },
-    { status: "done", hint: "Arsip tuntas" },
+  const kolom: { status: Status }[] = [
+    { status: "todo" },
+    { status: "doing" },
+    { status: "done" },
   ];
 
   return (
@@ -603,8 +631,8 @@ export default function JadwalView() {
       badge="Kanban Aktif"
       badgeTone="beta"
     >
-      {/* Banner target kelulusan */}
-      <div className="flex flex-col gap-4 rounded-2xl border-[3px] border-black bg-white p-4 shadow-brutal sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+      {/* Banner target kelulusan — referensi: panel sky + badge putih */}
+      <div className="flex flex-col gap-4 rounded-2xl border-[3px] border-black bg-brand-panel p-4 shadow-brutal sm:p-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-[3px] border-black bg-brand-yellow shadow-[2px_2px_0px_#000000]">
             <span aria-hidden className="material-symbols-outlined text-[24px] text-brand-navy">
@@ -624,8 +652,7 @@ export default function JadwalView() {
           <span className="inline-flex items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 py-1.5 font-label text-xs font-bold text-brand-navy shadow-[2px_2px_0px_#000000]">
             <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-brand-yellow ring-1 ring-black" />
             Hari ini • {fmtSingkat(new Date())}
-          </span>
-          <div className="min-w-[160px] flex-1 sm:min-w-[200px]">
+          </span>          <div className="min-w-[160px] flex-1 sm:min-w-[200px]">
             <div className="flex items-center justify-between font-label text-[11px] font-extrabold uppercase text-brand-muted">
               <span>Progress Skripsi</span>
               <span className="text-brand-navy">{persen}%</span>
@@ -651,7 +678,7 @@ export default function JadwalView() {
           <span aria-hidden className="material-symbols-outlined text-[18px]">
             calendar_month
           </span>
-          Agenda
+          Agenda &amp; Timeline
         </button>
         <button
           type="button"
@@ -662,7 +689,7 @@ export default function JadwalView() {
           <span aria-hidden className="material-symbols-outlined text-[18px]">
             view_kanban
           </span>
-          Kanban
+          Kanban Board
         </button>
       </div>
 
@@ -719,52 +746,68 @@ export default function JadwalView() {
             pandangan === "agenda" ? "flex" : "hidden"
           } lg:flex`}
         >
-          <div className="rounded-2xl border-[3px] border-black bg-white p-4 shadow-brutal">
-            <div className="flex items-center justify-between border-b-2 border-black pb-3">
-              <h2 className="flex items-center gap-2 font-display text-lg font-bold text-brand-navy">
-                <span aria-hidden className="material-symbols-outlined text-[22px] text-brand-blue">
+          {/* Header pekan di luar kartu — referensi: baris label + pill minggu */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <h2 className="flex items-center gap-2 font-label text-sm font-bold text-brand-navy">
+                <span aria-hidden className="material-symbols-outlined text-[20px] text-brand-blue">
                   today
                 </span>
                 Pekan Ini • {new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
               </h2>
-              <span className="rounded-full border-[2px] border-black bg-brand-panel px-2 py-0.5 font-label text-[11px] font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000]">
+              <span className="shrink-0 rounded-full border-[3px] border-black bg-brand-panel px-2.5 py-1 font-label text-[11px] font-extrabold uppercase tracking-wider text-brand-navy shadow-[2px_2px_0px_#000000]">
                 Minggu ke-{nomorMingguIni()}
               </span>
             </div>
-            <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 sm:gap-2 lg:grid lg:grid-cols-6 lg:overflow-visible">
+            <div className="flex items-center justify-between gap-1.5 overflow-x-auto py-1">
               {HARI.map((h, i) => (
                 <button
                   key={h.kode}
                   type="button"
                   onClick={() => setHariAktif(i)}
                   aria-pressed={hariAktif === i}
-                  className={`flex min-w-[60px] flex-1 flex-col items-center rounded-xl border-[3px] border-black px-1 py-2 transition-all active:translate-y-0.5 active:shadow-none ${
+                  className={`flex min-w-[50px] flex-1 flex-col items-center justify-center rounded-2xl border-[3px] border-black px-1 py-2.5 transition-transform active:translate-y-1 active:shadow-none ${
                     hariAktif === i
                       ? "scale-105 bg-brand-blue text-white shadow-brutal"
                       : "bg-white text-brand-navy shadow-brutal hover:bg-brand-panel"
                   }`}
                 >
                   <span
-                    className={`font-label text-[11px] font-bold ${
+                    className={`font-label text-xs font-bold ${
                       hariAktif === i ? "text-white" : "text-brand-muted"
                     }`}
                   >
                     {h.kode.slice(0, 3)}
                   </span>
-                  <span className="font-display text-lg font-bold">{h.tgl}</span>
-                  <span className={`mt-1 h-1.5 w-1.5 rounded-full ${h.dot} ring-1 ring-black`} />
+                  <span className="font-display text-xl font-bold">{h.tgl}</span>
+                  <span
+                    className={`mt-1 h-2 w-2 rounded-full ring-1 ring-black ${
+                      hariAktif === i ? "bg-brand-yellow" : h.dot
+                    }`}
+                  />
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-1">
-            <h2 className="flex items-center gap-2 font-display text-lg font-bold text-brand-navy">
+          {/* Agenda Terdekat */}
+          <div className="flex items-center justify-between gap-2 px-1">
+            <h2 className="flex flex-wrap items-center gap-2 font-display text-xl font-bold text-brand-navy">
               Agenda Terdekat
-              <span className="rounded-full border-[2px] border-black bg-brand-panel px-2 py-0.5 font-label text-[11px] font-extrabold text-brand-navy shadow-[2px_2px_0px_#000000]">
+              <span className="rounded-full border-[3px] border-black bg-brand-panel px-2 py-0.5 font-label text-xs font-extrabold text-brand-blue shadow-[2px_2px_0px_#000000]">
                 {agendaTampil.length} Agenda
               </span>
             </h2>
+            <button
+              type="button"
+              onClick={() => {
+                setFilter((f) => (f === "tinggi" ? "semua" : "tinggi"));
+                if (pandangan !== "agenda") setPandangan("agenda");
+              }}
+              className="font-label text-xs font-bold text-brand-blue underline decoration-2 underline-offset-2"
+            >
+              Filter Prioritas
+            </button>
           </div>
 
           {agendaTampil.length === 0 && (
@@ -781,32 +824,36 @@ export default function JadwalView() {
               }`}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5">
+                <div className="flex items-start gap-3">
                   <button
                     type="button"
                     onClick={() => toggleAgenda(a.id)}
                     aria-pressed={a.tuntas}
                     aria-label={`Tandai tuntas: ${a.judul}`}
-                    className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 border-black shadow-[2px_2px_0px_#000000] transition-all active:translate-y-0.5 active:shadow-none ${
+                    className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 border-black shadow-[2px_2px_0px_#000000] transition-transform active:translate-y-0.5 active:shadow-none ${
                       a.tuntas ? "bg-brand-blue text-white" : "bg-brand-panel"
                     }`}
                   >
                     <span
                       aria-hidden
                       className={`material-symbols-outlined text-[16px] ${
-                        a.tuntas ? "" : "invisible"
+                        a.tuntas ? "" : "text-transparent"
                       }`}
                     >
                       check
                     </span>
                   </button>
                   <div>
-                    <span className="flex items-center gap-1.5 font-label text-[11px] font-extrabold uppercase tracking-wide text-brand-brick">
-                      <span className={`h-2.5 w-2.5 rounded-full ring-1 ring-black ${dotPrioritas(a.prioritas)}`} />
+                    <span
+                      className={`flex items-center gap-2 font-label text-[11px] font-extrabold uppercase tracking-wider ${labelPrioritas(
+                        a.prioritas
+                      )}`}
+                    >
+                      <span className={`h-2.5 w-2.5 rounded-full shadow-[1px_1px_0px_#000000] ${dotPrioritas(a.prioritas)}`} />
                       {a.kategori}
                     </span>
                     <h3
-                      className={`mt-0.5 font-display text-lg font-bold text-brand-navy ${
+                      className={`mt-0.5 font-display text-xl font-bold text-brand-navy ${
                         a.tuntas ? "line-through" : ""
                       }`}
                     >
@@ -815,7 +862,7 @@ export default function JadwalView() {
                   </div>
                 </div>
                 <span
-                  className={`shrink-0 whitespace-nowrap rounded-full border-[2px] border-black px-2.5 py-1 font-label text-[11px] font-extrabold uppercase shadow-[2px_2px_0px_#000000] ${badgeAgenda(a.badgeTone)}`}
+                  className={`shrink-0 whitespace-nowrap rounded-full border-[3px] border-black px-2.5 py-1 font-label text-[11px] font-extrabold uppercase tracking-wider shadow-[2px_2px_0px_#000000] ${badgeAgenda(a.badgeTone)}`}
                 >
                   {a.badge}
                 </span>
@@ -824,8 +871,13 @@ export default function JadwalView() {
               <div className="flex items-center justify-between gap-2 pl-9 pt-1">
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="flex items-center gap-1 font-label text-xs font-bold text-brand-navy">
-                    <span aria-hidden className="material-symbols-outlined text-[18px] text-brand-blue">
-                      schedule
+                    <span
+                      aria-hidden
+                      className={`material-symbols-outlined text-[18px] ${
+                        a.badgeTone === "danger" ? "text-brand-brick" : "text-brand-blue"
+                      }`}
+                    >
+                      {a.badgeTone === "danger" ? "alarm" : "schedule"}
                     </span>
                     {a.jam}
                   </span>
@@ -836,6 +888,14 @@ export default function JadwalView() {
                     {a.lokasi}
                   </span>
                 </div>
+                {a.inisial ? (
+                  <span
+                    title={a.kategori}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-black bg-brand-panel font-label text-[11px] font-extrabold text-brand-navy shadow-[2px_2px_0px_#000000]"
+                  >
+                    {a.inisial}
+                  </span>
+                ) : null}
               </div>
             </article>
           ))}
@@ -847,86 +907,86 @@ export default function JadwalView() {
             pandangan === "kanban" ? "flex" : "hidden"
           } lg:flex`}
         >
-          <div className="rounded-2xl border-[3px] border-black bg-white p-4 shadow-brutal">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b-[3px] border-black pb-3">
-              <h2 className="flex items-center gap-2 font-display text-xl font-bold text-brand-navy">
-                <span aria-hidden className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-brand-blue text-white shadow-[2px_2px_0px_#000000]">
-                  <span className="material-symbols-outlined text-[20px]">dashboard</span>
-                </span>
-                Papan Skripsi
-                <span className="rounded-full border-2 border-black bg-brand-yellow px-2 py-0.5 font-label text-[11px] font-extrabold uppercase text-black shadow-[2px_2px_0px_#000000]">
-                  Kanban Aktif
-                </span>
-              </h2>
-              <span className="font-label text-xs font-bold text-brand-muted">
-                Total: {tugas.length} Kartu • {done} tuntas
+          {/* Header papan — referensi: judul + badge + total, tanpa wrapper kartu */}
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                aria-hidden
+                className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-black bg-brand-blue text-white shadow-[2px_2px_0px_#000000]"
+              >
+                <span className="material-symbols-outlined text-[20px]">dashboard</span>
+              </span>
+              <h2 className="font-display text-xl font-bold text-brand-navy">Papan Skripsi</h2>
+              <span className="rounded-full border-[3px] border-black bg-brand-panel px-2 py-0.5 font-label text-[11px] font-extrabold uppercase tracking-wider text-brand-navy shadow-[2px_2px_0px_#000000]">
+                Kanban Aktif
               </span>
             </div>
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-              {kolom.map((k) => {
-                const isi = tugas.filter(
-                  (t) => t.status === k.status && cocokFilter(t)
-                );
-                const jumlah =
-                  k.status === "todo" ? todo : k.status === "doing" ? doing : done;
-                return (
-                  <section
-                    key={k.status}
-                    aria-label={LABEL_STATUS[k.status]}
-                    className="flex flex-col gap-3 rounded-xl border-[3px] border-black bg-brand-panel p-3"
-                  >
-                    <header className="flex items-center justify-between">
-                      <h3 className="flex items-center gap-1.5 font-display text-base font-bold text-brand-navy">
-                        <span
-                          className={`h-3 w-3 rounded-full border-2 border-black ${
-                            k.status === "todo"
-                              ? "bg-white"
-                              : k.status === "doing"
+            <span className="font-label text-xs font-bold text-brand-muted">
+              Total: {tugas.length} Kartu • {done} tuntas
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+                {kolom.map((k) => {
+                  const isi = tugas.filter(
+                    (t) => t.status === k.status && cocokFilter(t)
+                  );
+                  const jumlah =
+                    k.status === "todo" ? todo : k.status === "doing" ? doing : done;
+                  return (
+                    <section
+                      key={k.status}
+                      aria-label={LABEL_STATUS[k.status]}
+                      className="flex flex-col gap-3 rounded-2xl border-[3px] border-black bg-brand-panel p-3.5 shadow-brutal"
+                    >
+                      <header className="flex items-center justify-between gap-2 px-1 pb-1">
+                        <h3 className="flex items-center gap-2 font-display text-lg font-bold text-brand-navy">
+                          <span
+                            className={`h-3.5 w-3.5 rounded-full border-2 border-black shadow-[1px_1px_0px_#000000] ${
+                              k.status === "doing"
                                 ? "bg-brand-blue"
-                                : "bg-white"
-                          }`}
-                        />
-                        {LABEL_STATUS[k.status]}
-                        <span className="rounded-full border-2 border-black bg-white px-2 py-0.5 font-label text-[11px] font-extrabold text-brand-navy shadow-[2px_2px_0px_#000000]">
-                          {jumlah}
-                        </span>
-                      </h3>
-                      {k.status === "doing" ? (
-                        <span aria-hidden className="material-symbols-outlined text-[20px] text-brand-blue">
-                          refresh
-                        </span>
-                      ) : k.status === "done" ? (
-                        <span aria-hidden className="material-symbols-outlined text-[20px] text-brand-blue">
-                          task_alt
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setFormTerbuka(true)}
-                          aria-label="Tambah kartu To Do"
-                          className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-black bg-white text-brand-navy shadow-[2px_2px_0px_#000000] transition-all hover:bg-brand-yellow active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-                        >
-                          <span aria-hidden className="material-symbols-outlined text-[18px]">
-                            add
+                                : k.status === "done"
+                                  ? "bg-brand-blue"
+                                  : "bg-white"
+                            }`}
+                          />
+                          {LABEL_STATUS[k.status]}
+                          <span className="rounded-full border-[3px] border-black bg-white px-2 py-0.5 font-label text-xs font-extrabold text-brand-navy shadow-[2px_2px_0px_#000000]">
+                            {jumlah}
                           </span>
-                        </button>
+                        </h3>
+                        {k.status === "doing" ? (
+                          <span aria-hidden className="material-symbols-outlined text-[20px] text-brand-blue">
+                            refresh
+                          </span>
+                        ) : k.status === "done" ? (
+                          <span aria-hidden className="material-symbols-outlined text-[20px] text-brand-blue">
+                            task_alt
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setFormTerbuka(true)}
+                            aria-label="Tambah kartu To Do"
+                            className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-black bg-white text-brand-navy shadow-[2px_2px_0px_#000000] transition-all hover:bg-brand-yellow active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                          >
+                            <span aria-hidden className="material-symbols-outlined text-[18px]">
+                              add
+                            </span>
+                          </button>
+                        )}
+                      </header>
+                      {isi.length === 0 && (
+                        <p className="rounded-lg border-2 border-dashed border-black/30 bg-white/70 p-3 text-center font-body text-xs text-brand-muted">
+                          {tugas.length === 0
+                            ? "Belum ada kartu. Tambah tugas pertama!"
+                            : "Tak ada agenda/task yang cocok — coba ubah filter atau pencarian."}
+                        </p>
                       )}
-                    </header>
-                    <p className="font-label text-[11px] font-bold uppercase text-brand-muted">
-                      {k.hint}
-                    </p>
-                    {isi.length === 0 && (
-                      <p className="rounded-lg border-2 border-dashed border-black/30 bg-white/70 p-3 text-center font-body text-xs text-brand-muted">
-                        {tugas.length === 0
-                          ? "Belum ada kartu. Tambah tugas pertama!"
-                          : "Tak ada agenda/task yang cocok — coba ubah filter atau pencarian."}
-                      </p>
-                    )}
-                    {isi.map(renderKartu)}
-                  </section>
-                );
-              })}
-            </div>
+                      {isi.map(renderKartu)}
+                    </section>
+                  );
+                })}
           </div>
 
           {/* Strip kolaborasi */}
@@ -938,8 +998,8 @@ export default function JadwalView() {
               <span className="font-label text-sm font-bold text-brand-navy">
                 Tim Penguji & Rekan Sejawat
               </span>
-              <span className="rounded-full border-2 border-black bg-brand-panel px-2 py-0.5 font-label text-[10px] font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000]">
-                Baca & Komentar
+              <span className="rounded-full border-[3px] border-black bg-brand-panel px-2 py-0.5 font-label text-[10px] font-extrabold uppercase tracking-wider text-brand-navy shadow-[2px_2px_0px_#000000]">
+                Akses Baca &amp; Komentar
               </span>
             </div>
             <div className="flex items-center gap-2">
