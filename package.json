@@ -1,0 +1,21 @@
+{
+  "name": "cademy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cademy — platform tools akademik untuk mahasiswa",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "pnpm --filter @cademy/web dev",
+    "build": "pnpm --filter @cademy/web build",
+    "lint": "pnpm --filter @cademy/web lint",
+    "typecheck": "pnpm --filter @cademy/web typecheck",
+    "test": "tsx --test \"packages/utils/**/*.test.ts\" \"apps/web/app/tools/literatur/store.test.ts\""
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

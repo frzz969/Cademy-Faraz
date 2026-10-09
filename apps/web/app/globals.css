@@ -1,0 +1,113 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    background-color: #eaf5fc;
+    color: #0b2e4b;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-heading {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif;
+    color: #0b2e4b;
+  }
+}
+
+@layer utilities {
+  .material-symbols-outlined {
+    font-family: "Material Symbols Outlined";
+    font-weight: 400;
+    font-style: normal;
+    font-size: 24px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+  .brutal-border {
+    border: 3px solid #000000;
+  }
+  .brutal-border-2 {
+    border: 2px solid #000000;
+  }
+  .brutal-shadow {
+    box-shadow: 4px 4px 0px #000000;
+  }
+  .brutal-shadow-lg {
+    box-shadow: 6px 6px 0px #000000;
+  }
+  .brutal-press:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0px #000000;
+  }
+  .brutal-shadow-sm {
+    box-shadow: 2px 2px 0px #000000;
+  }
+  /* Per-page body font (Stitch source of truth):
+     - homepage + about → Space Grotesk
+     - tools/directory → Plus Jakarta Sans (default body)
+     Pemilik homepage (fixer) cukup tambah class "page-home" di root div.
+     About sudah memakai "page-about" di bawah. */
+  .page-about,
+  .page-home {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+  }
+  .page-about .font-body,
+  .page-home .font-body {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+  }
+  .font-body-grotesk {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+  }
+  .font-body-jakarta {
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer base {
+  /* Focus terlihat untuk kontrol custom (Stitch: outline hitam tegas). */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid #0e4a6e;
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-ping,
+  .animate-pulse,
+  .animate-spin {
+    animation: none !important;
+  }
+}

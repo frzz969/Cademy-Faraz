@@ -1,0 +1,42 @@
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# next.js
+.next/
+out/
+build/
+dist/
+
+# env
+.env
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# turbo
+.turbo/
+
+# OS / editor
+.DS_Store
+*.pem
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# deepwork session state (git-local)
+.slim/deepwork/
+
+# arsip lokal & build cache (jangan masuk repo)
+bag1.zip
+bag2.zip
+*.tsbuildinfo
+
+todoo.txt
