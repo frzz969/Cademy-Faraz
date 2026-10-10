@@ -143,8 +143,8 @@ export default function PdfPage() {
         </div>
       </div>
       {toast && (
-        <div aria-live="polite" className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl border-[3px] border-black bg-brand-navy px-4 py-3 font-body text-sm text-white shadow-brutal">
-          <span aria-hidden className="material-symbols-outlined text-[20px] text-brand-yellow">check_circle</span>
+        <div aria-live="polite" className="fixed bottom-24 right-6 z-50 flex max-w-[calc(100vw-3rem)] items-center gap-2 rounded-2xl border-[3px] border-black bg-brand-navy px-4 py-3 font-body text-sm text-white shadow-brutal md:bottom-6">
+          <span aria-hidden className="material-symbols-outlined shrink-0 text-[20px] leading-none text-brand-yellow">check_circle</span>
           <span>{toast}</span>
         </div>
       )}

@@ -7,6 +7,89 @@ import { generate, sentences, type Q, type QType } from "@cademy/utils";
 
 const inputCls = "w-full rounded-xl border-[3px] border-black bg-brand-panel px-4 py-3 font-body text-sm outline-none focus:bg-white focus:ring-2 focus:ring-brand-blue";
 
+const KEY = "cademy:quiz-v1";
+
+const VALID_TIPE: QType[] = ["campuran", "mcq", "benar-salah", "esai"];
+
+function sanitizeSoal(raw: unknown): Q[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Q[] = [];
+  for (const item of raw.slice(0, 30)) {
+    if (typeof item !== "object" || item === null) continue;
+    const o = item as Record<string, unknown>;
+    const id = typeof o["id"] === "string" ? (o["id"] as string).slice(0, 40) : "";
+    const soal = typeof o["soal"] === "string" ? (o["soal"] as string).slice(0, 2000) : "";
+    const kunci = typeof o["kunci"] === "string" ? (o["kunci"] as string).slice(0, 1000) : "";
+    if (!id || !soal || !kunci) continue;
+    const tipe = typeof o["tipe"] === "string" ? (o["tipe"] as string).slice(0, 30) : "";
+    const pembahasan =
+      typeof o["pembahasan"] === "string" ? (o["pembahasan"] as string).slice(0, 2000) : "";
+    const q: Q = { id, tipe, soal, kunci, pembahasan };
+    if (Array.isArray(o["opsi"])) {
+      const opsi = (o["opsi"] as unknown[])
+        .filter((x): x is string => typeof x === "string")
+        .slice(0, 6)
+        .map((s) => s.slice(0, 500));
+      if (opsi.length > 0) q.opsi = opsi;
+    }
+    out.push(q);
+  }
+  return out;
+}
+
+function sanitizeJawab(raw: unknown): Record<string, string> {
+  if (typeof raw !== "object" || raw === null) return {};
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>).slice(0, 60)) {
+    if (typeof v !== "string") continue;
+    out[k.slice(0, 40)] = v.slice(0, 2000);
+  }
+  return out;
+}
+
+function sanitizeMandiri(raw: unknown): Record<string, "benar" | "salah"> {
+  if (typeof raw !== "object" || raw === null) return {};
+  const out: Record<string, "benar" | "salah"> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>).slice(0, 60)) {
+    if (v === "benar" || v === "salah") out[k.slice(0, 40)] = v;
+  }
+  return out;
+}
+
+function loadQuiz(): {
+  materi: string;
+  jumlah: string;
+  tipe: QType;
+  soal: Q[];
+  jawab: Record<string, string>;
+  mandiri: Record<string, "benar" | "salah">;
+} | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof v !== "object" || v === null) return null;
+    const materi = typeof v["materi"] === "string" ? (v["materi"] as string).slice(0, 20000) : "";
+    const jumlahRaw = typeof v["jumlah"] === "string" ? (v["jumlah"] as string) : "5";
+    const jumlahNum = Math.min(Math.max(Number(jumlahRaw) || 5, 1), 30);
+    const tipeRaw = typeof v["tipe"] === "string" ? (v["tipe"] as string) : "campuran";
+    const tipe: QType = (VALID_TIPE as string[]).includes(tipeRaw)
+      ? (tipeRaw as QType)
+      : "campuran";
+    return {
+      materi,
+      jumlah: String(jumlahNum),
+      tipe,
+      soal: sanitizeSoal(v["soal"]),
+      jawab: sanitizeJawab(v["jawab"]),
+      mandiri: sanitizeMandiri(v["mandiri"]),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function QuizPage() {
   const [materi, setMateri] = React.useState("");
   const [jumlah, setJumlah] = React.useState("5");
@@ -17,6 +100,32 @@ export default function QuizPage() {
   const [info, setInfo] = React.useState("");
   // Cek mandiri esai: user menilai jawabannya sendiri (jujur, bukan auto-nilai).
   const [mandiri, setMandiri] = React.useState<Record<string, "benar" | "salah">>({});
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    const saved = loadQuiz();
+    if (saved) {
+      setMateri(saved.materi);
+      setJumlah(saved.jumlah);
+      setTipe(saved.tipe);
+      setSoal(saved.soal);
+      setJawab(saved.jawab);
+      setMandiri(saved.mandiri);
+    }
+    setReady(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!ready) return;
+    try {
+      localStorage.setItem(
+        KEY,
+        JSON.stringify({ materi, jumlah, tipe, soal: soal.slice(0, 30), jawab, mandiri })
+      );
+    } catch {
+      setInfo("Penyimpanan penuh — kurangi panjang materi atau tekan Reset untuk membersihkan simpanan lokal.");
+    }
+  }, [materi, jumlah, tipe, soal, jawab, mandiri, ready]);
 
   function buat() {
     const diminta = Math.min(Math.max(Number(jumlah) || 5, 1), 30);
@@ -38,6 +147,11 @@ export default function QuizPage() {
     setMandiri({});
     setShowKunci(false);
     setInfo("");
+    try {
+      localStorage.removeItem(KEY);
+    } catch {
+      /* abaikan */
+    }
   }
 
   function nilaiEsai(qid: string, v: "benar" | "salah") {

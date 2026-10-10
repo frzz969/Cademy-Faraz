@@ -25,6 +25,71 @@ interface Row { id: string; nama: string; sks: string; nilai: string; }
 const uid = () => Math.random().toString(36).slice(2, 9);
 const inputCls = "h-11 w-full rounded-xl border-[3px] border-black bg-brand-panel px-3 font-body text-sm font-medium outline-none focus:bg-white focus:ring-2 focus:ring-brand-blue";
 
+const KEY = "cademy:gpa-v1";
+
+function defaultRows(): Row[] {
+  return [
+    { id: uid(), nama: "Matkul 1", sks: "3", nilai: "A" },
+    { id: uid(), nama: "Matkul 2", sks: "2", nilai: "B+" },
+  ];
+}
+
+function sanitizeLoaded(v: unknown): {
+  rows: Row[];
+  skala: string;
+  sksLalu: string;
+  ipkLalu: string;
+  target: string;
+  sisaSks: string;
+} | null {
+  try {
+    if (typeof v !== "object" || v === null) return null;
+    const o = v as Record<string, unknown>;
+    const skalaRaw = typeof o["skala"] === "string" ? (o["skala"] as string) : "Umum / UNAS";
+    const skala = Object.keys(SCALES).includes(skalaRaw) ? skalaRaw : "Umum / UNAS";
+    const grades = Object.keys(SCALES[skala]);
+    if (!Array.isArray(o["rows"])) return null;
+    const rows: Row[] = [];
+    for (const r of (o["rows"] as unknown[]).slice(0, 50)) {
+      if (typeof r !== "object" || r === null) continue;
+      const ro = r as Record<string, unknown>;
+      const nama = typeof ro["nama"] === "string" ? (ro["nama"] as string).slice(0, 120) : "";
+      const sks = typeof ro["sks"] === "string" ? (ro["sks"] as string).slice(0, 10) : "3";
+      const nilaiRaw = typeof ro["nilai"] === "string" ? (ro["nilai"] as string) : "B";
+      const nilai = grades.includes(nilaiRaw) ? nilaiRaw : "B";
+      const id =
+        typeof ro["id"] === "string" && (ro["id"] as string)
+          ? (ro["id"] as string).slice(0, 40)
+          : uid();
+      rows.push({ id, nama, sks, nilai });
+    }
+    if (rows.length === 0) return null;
+    const str = (x: unknown, fb: string) =>
+      typeof x === "string" ? (x as string).slice(0, 20) : fb;
+    return {
+      rows,
+      skala,
+      sksLalu: str(o["sksLalu"], "0"),
+      ipkLalu: str(o["ipkLalu"], "0"),
+      target: str(o["target"], "3.50"),
+      sisaSks: str(o["sisaSks"], "20"),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function loadGpa(): ReturnType<typeof sanitizeLoaded> {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    return sanitizeLoaded(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
 async function copyTextWithFallback(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard?.writeText) {
@@ -63,6 +128,7 @@ export default function GpaPage() {
   const [target, setTarget] = React.useState("3.50");
   const [sisaSks, setSisaSks] = React.useState("20");
   const [toast, setToast] = React.useState<string | null>(null);
+  const [ready, setReady] = React.useState(false);
   const toastTimer = React.useRef<number | null>(null);
 
   const showToast = React.useCallback((msg: string) => {
@@ -70,6 +136,31 @@ export default function GpaPage() {
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(null), 2600);
   }, []);
+
+  React.useEffect(() => {
+    const saved = loadGpa();
+    if (saved) {
+      setRows(saved.rows);
+      setSkala(saved.skala);
+      setSksLalu(saved.sksLalu);
+      setIpkLalu(saved.ipkLalu);
+      setTarget(saved.target);
+      setSisaSks(saved.sisaSks);
+    }
+    setReady(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!ready) return;
+    try {
+      localStorage.setItem(
+        KEY,
+        JSON.stringify({ rows, skala, sksLalu, ipkLalu, target, sisaSks })
+      );
+    } catch {
+      showToast("Penyimpanan penuh — hapus sebagian data atau tekan Reset.");
+    }
+  }, [rows, skala, sksLalu, ipkLalu, target, sisaSks, ready, showToast]);
 
   // SKS per-baris: disiplin sama seperti field lain — parseDesimal, null → error
   // validasi (bukan Number||0 diam-diam). Total memakai ?? 0 agar tetap hitung.
@@ -102,14 +193,17 @@ export default function GpaPage() {
 
   function reset() {
     if (!window.confirm("Reset semua input GPA ke awal? Data yang diisi akan hilang.")) return;
-    setRows([
-      { id: uid(), nama: "Matkul 1", sks: "3", nilai: "A" },
-      { id: uid(), nama: "Matkul 2", sks: "2", nilai: "B+" },
-    ]);
+    setRows(defaultRows());
+    setSkala("Umum / UNAS");
     setSksLalu("0");
     setIpkLalu("0");
     setTarget("3.50");
     setSisaSks("20");
+    try {
+      localStorage.removeItem(KEY);
+    } catch {
+      /* abaikan */
+    }
   }
 
   async function salinHasil() {
@@ -202,8 +296,8 @@ export default function GpaPage() {
         </div>
       </div>
       {toast && (
-        <div aria-live="polite" className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl border-[3px] border-black bg-brand-navy px-4 py-3 font-body text-sm text-white shadow-brutal">
-          <span aria-hidden className="material-symbols-outlined text-[20px] text-brand-yellow">check_circle</span>
+        <div aria-live="polite" className="fixed bottom-24 right-6 z-50 flex max-w-[calc(100vw-3rem)] items-center gap-2 rounded-2xl border-[3px] border-black bg-brand-navy px-4 py-3 font-body text-sm text-white shadow-brutal md:bottom-6">
+          <span aria-hidden className="material-symbols-outlined shrink-0 text-[20px] leading-none text-brand-yellow">check_circle</span>
           <span>{toast}</span>
         </div>
       )}

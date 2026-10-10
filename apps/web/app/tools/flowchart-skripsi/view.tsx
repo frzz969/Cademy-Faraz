@@ -4,15 +4,15 @@ import * as React from "react";
 import Link from "next/link";
 import { ToolShell } from "../../../components/ToolShell";
 import { Button, Panel } from "@cademy/ui";
-import { loadTasks, saveTasks, bySource } from "../../../components/task-store";
+import { loadTasks, saveTasks, bySource, type SharedTask } from "../../../components/task-store";
 
-interface Step {
+export interface Step {
   id: string;
   label: string;
   sub: string;
 }
 
-interface Phase {
+export interface Phase {
   id: string;
   no: string;
   title: string;
@@ -92,6 +92,44 @@ const DEFAULT_REVISIONS: Revision[] = [
   { id: "rev-2", penguji: "Penguji 2", catatan: "Rapikan tata tulis & sitasi", selesai: false },
 ];
 
+/**
+ * Opsi A — flowchart satu-satunya penulis source:roadmap (murni, testable).
+ * TIDAK rebuild memaksa status todo/sedang: status/dueDate/prioritas yang
+ * datang dari slice dipertahankan. Toggle langkah hanya membalik done/todo
+ * (doing yang sah tetap doing; createdAt stabil).
+ */
+export function susunRoadmap(
+  phases: Phase[],
+  steps: Record<string, boolean>,
+  prevList: SharedTask[]
+): SharedTask[] {
+  const prev = new Map(
+    prevList.filter((t) => t.source === "roadmap").map((t) => [t.id, t])
+  );
+  return phases.flatMap((p) =>
+    p.steps.map((s) => {
+      const id = `roadmap:${p.id}:${s.id}`;
+      const lama = prev.get(id);
+      return {
+        id,
+        source: "roadmap" as const,
+        status: steps[s.id]
+          ? ("done" as const)
+          : lama?.status === "doing"
+            ? ("doing" as const)
+            : ("todo" as const),
+        prioritas: lama?.prioritas ?? ("sedang" as const),
+        title: s.label,
+        description: s.sub,
+        phaseId: p.id,
+        roadmapStepId: s.id,
+        ...(lama?.dueDate ? { dueDate: lama.dueDate } : {}),
+        createdAt: lama?.createdAt ?? new Date().toISOString(),
+      };
+    })
+  );
+}
+
 const inputCls =
   "h-11 w-full rounded-xl border-[3px] border-black bg-brand-panel px-3 font-body text-sm font-medium text-brand-navy outline-none focus:bg-white focus:ring-2 focus:ring-brand-blue";
 
@@ -160,21 +198,7 @@ export default function FlowchartSkripsiView() {
     const next: Record<string, boolean> = {};
     for (const t of roadmap) if (t.roadmapStepId) next[t.roadmapStepId] = t.status === "done";
     if (roadmap.length === 0) {
-      const built = all.concat(
-        PHASES.flatMap((p) =>
-          p.steps.map((s) => ({
-            id: `roadmap:${p.id}:${s.id}`,
-            source: "roadmap" as const,
-            status: savedSteps[s.id] ? ("done" as const) : ("todo" as const),
-            prioritas: "sedang" as const,
-            title: s.label,
-            description: s.sub,
-            phaseId: p.id,
-            roadmapStepId: s.id,
-            createdAt: new Date().toISOString(),
-          }))
-        )
-      );
+      const built = all.concat(susunRoadmap(PHASES, savedSteps, all));
       saveTasks(built);
       setSteps(savedSteps);
     } else {
@@ -192,20 +216,9 @@ export default function FlowchartSkripsiView() {
     if (ready) {
       const all = loadTasks();
       const rest = all.filter((t) => t.source !== "roadmap");
-      const roadmap = PHASES.flatMap((p) =>
-        p.steps.map((s) => ({
-          id: `roadmap:${p.id}:${s.id}`,
-          source: "roadmap" as const,
-          status: steps[s.id] ? ("done" as const) : ("todo" as const),
-          prioritas: "sedang" as const,
-          title: s.label,
-          description: s.sub,
-          phaseId: p.id,
-          roadmapStepId: s.id,
-          createdAt: new Date().toISOString(),
-        }))
-      );
-      saveTasks(rest.concat(roadmap));
+      // Opsi A: satu-satunya penulis roadmap — susunRoadmap mempertahankan
+      // status/dueDate/prioritas slice, bukan rebuild memaksa todo/sedang.
+      saveTasks(rest.concat(susunRoadmap(PHASES, steps, all)));
       try {
         localStorage.setItem(KEY, JSON.stringify({ steps: {}, revisions, revisionStart, similarity }));
       } catch {
@@ -301,14 +314,14 @@ export default function FlowchartSkripsiView() {
         <p className="mt-1 font-display text-4xl font-extrabold text-brand-blue">{pct}%</p>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div className="flex items-center gap-2.5 rounded-xl border-[3px] border-black bg-brand-panel p-3 shadow-brutal-sm">
-            <span aria-hidden className="text-xl"><span className="material-symbols-outlined">check_circle</span></span>
+            <span aria-hidden className="inline-flex shrink-0 items-center text-xl leading-none"><span className="material-symbols-outlined shrink-0 leading-none">check_circle</span></span>
             <div>
               <p className="font-label text-[11px] font-extrabold uppercase">Checklist Tugas</p>
               <p className="text-sm font-bold">{doneCount} / {allSteps.length} Selesai</p>
             </div>
           </div>
           <div className="flex items-center gap-2.5 rounded-xl border-[3px] border-black bg-brand-panel p-3 shadow-brutal-sm">
-            <span aria-hidden className="text-xl"><span className="material-symbols-outlined">event</span></span>
+            <span aria-hidden className="inline-flex shrink-0 items-center text-xl leading-none"><span className="material-symbols-outlined shrink-0 leading-none">event</span></span>
             <div>
               <p className="font-label text-[11px] font-extrabold uppercase">Target Sidang</p>
               <p className="text-sm font-bold">Akhir Semester</p>
@@ -402,7 +415,7 @@ export default function FlowchartSkripsiView() {
                             <span className={`block font-bold ${steps[s.id] ? "line-through" : ""}`}>{s.label}</span>
                             <span className="block text-xs text-brand-muted">{s.sub}</span>
                           </span>
-                          {steps[s.id] && <span aria-hidden className="ml-auto font-black text-brand-blue"><span className="material-symbols-outlined">check</span></span>}
+                          {steps[s.id] && <span aria-hidden className="ml-auto shrink-0 font-black leading-none text-brand-blue"><span className="material-symbols-outlined shrink-0 leading-none">check</span></span>}
                         </label>
                       ))}
                     </div>
@@ -420,7 +433,7 @@ export default function FlowchartSkripsiView() {
       {/* Motivasi + rekap */}
       <Panel className="mt-5 bg-white">
         <div className="flex items-center gap-2.5">
-          <span aria-hidden className="flex h-10 w-10 items-center justify-center rounded-full border-[3px] border-black bg-brand-yellow text-xl shadow-brutal-sm"><span className="material-symbols-outlined">school</span></span>
+          <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[3px] border-black bg-brand-yellow text-xl shadow-brutal-sm"><span className="material-symbols-outlined shrink-0 leading-none">school</span></span>
           <div>
             <h2 className="font-display text-lg font-bold">Tetap Semangat!</h2>
             <p className="text-sm text-brand-muted">
@@ -472,7 +485,7 @@ export default function FlowchartSkripsiView() {
               )}
             </span>
             {similarity.trim() !== "" && !simValid && (
-              <p className="text-xs font-bold text-brand-brick"><span className="material-symbols-outlined">warning</span>️ Isi 0–100.</p>
+              <p className="flex items-center gap-1 text-xs font-bold text-brand-brick"><span className="material-symbols-outlined shrink-0 leading-none">warning</span>️ Isi 0–100.</p>
             )}
           </div>
         </div>
@@ -494,10 +507,10 @@ export default function FlowchartSkripsiView() {
               <button
                 type="button"
                 onClick={() => setRevisions((rs) => rs.filter((x) => x.id !== r.id))}
-                className="rounded-lg border-2 border-black bg-white px-2 py-1 text-xs font-bold"
+                className="inline-flex items-center justify-center rounded-lg border-2 border-black bg-white px-2 py-1 text-xs font-bold"
                 aria-label="Hapus revisi"
               >
-                <span className="material-symbols-outlined">close</span>
+                <span className="material-symbols-outlined shrink-0 leading-none">close</span>
               </button>
             </div>
           ))}
@@ -517,9 +530,9 @@ export default function FlowchartSkripsiView() {
             <Link
               key={c.href}
               href={c.href}
-              className="rounded-2xl border-[3px] border-black bg-white p-4 shadow-brutal transition-transform hover:-translate-y-0.5 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+              className="flex flex-col items-start rounded-2xl border-[3px] border-black bg-white p-4 shadow-brutal transition-transform hover:-translate-y-0.5 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
             >
-              <span className="material-symbols-outlined text-2xl">{c.icon_name}</span>
+              <span className="material-symbols-outlined shrink-0 text-2xl leading-none">{c.icon_name}</span>
               <p className="mt-1 font-display text-base font-bold">{c.title}</p>
               <p className="text-xs text-brand-muted">{c.desc}</p>
               <p className="mt-2 font-label text-xs font-bold text-brand-blue">Buka →</p>

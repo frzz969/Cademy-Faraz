@@ -40,16 +40,16 @@ export default function AiDetectorView() {
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
         <section className="relative mb-5 rounded-2xl border-[3px] border-black bg-[#FFFFFF] p-5 shadow-[4px_4px_0px_#000000] lg:col-span-7 lg:mb-0">
           <div className="absolute -top-3 right-4 flex items-center gap-1 rounded-full border-2 border-black bg-[#D93A2B] px-3 py-0.5 text-[#FFFFFF] shadow-[2px_2px_0px_#000000]">
-            <span aria-hidden className="material-symbols-outlined text-[14px]">public</span>
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[14px] leading-none">public</span>
             <span className="font-body text-[11px] font-bold uppercase tracking-widest">External Tool</span>
           </div>
 
           <div className="my-3 flex items-center justify-center">
             <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl border-[3px] border-black bg-[#D9EDFA] shadow-[3px_3px_0px_#000000]">
               <div className="relative flex items-center justify-center">
-                <span aria-hidden className="material-symbols-outlined text-[52px] text-[#0B2E4B]">smart_toy</span>
+                <span aria-hidden className="material-symbols-outlined shrink-0 text-[52px] leading-none text-[#0B2E4B]">smart_toy</span>
                 <div className="absolute -bottom-1 -right-2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-black bg-[#0E4A6E] text-[#FFFFFF] shadow-[2px_2px_0px_#000000]">
-                  <span aria-hidden className="material-symbols-outlined text-[20px]">manage_search</span>
+                  <span aria-hidden className="material-symbols-outlined shrink-0 text-[20px] leading-none">manage_search</span>
                 </div>
               </div>
               <span aria-hidden className="absolute -left-2 -top-2 h-4 w-4 rounded-full border-2 border-black bg-[#FFD02B] shadow-[1px_1px_0px_#000000]" />
@@ -64,7 +64,7 @@ export default function AiDetectorView() {
             <h1 className="font-display text-[26px] font-bold leading-8 tracking-tight text-[#0B2E4B]">
               AI Detector
             </h1>
-            <p className="mt-0.5 font-body text-sm font-bold text-[#0E4A6E]">
+            <p className="mt-1 font-body text-sm font-bold text-[#0E4A6E]">
               Analyze your writing with AI Detector
             </p>
           </div>
@@ -84,7 +84,7 @@ export default function AiDetectorView() {
             className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full border-[3px] border-black bg-[#0E4A6E] px-6 text-[#FFFFFF] shadow-[4px_4px_0px_#000000] transition-transform active:translate-x-1 active:translate-y-1 active:shadow-none"
           >
             <span className="font-display text-xl font-bold tracking-tight">Buka AI Detector Eksternal</span>
-            <span aria-hidden className="material-symbols-outlined text-[24px]">open_in_new</span>
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[24px] leading-none">open_in_new</span>
           </a>
           <p className="mt-2 text-center font-body text-[11px] font-bold uppercase tracking-wider text-[#4E7390]">
             Dibuka di tab baru • Kebijakan layanan milik penyedia
@@ -176,7 +176,7 @@ export default function AiDetectorView() {
         {/* Keunggulan */}
         <section className="mb-5 mt-5 space-y-3">
           <div className="flex items-center gap-1.5 px-1">
-            <span aria-hidden className="material-symbols-outlined text-[20px] text-[#0E4A6E]">bolt</span>
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[20px] leading-none text-[#0E4A6E]">bolt</span>
             <h2 className="font-display text-xl font-bold text-[#0B2E4B]">Tentang Simulasi Ini</h2>
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -214,7 +214,7 @@ export default function AiDetectorView() {
                     {f.chip}
                   </span>
                 </div>
-                <p className="mt-0.5 font-body text-sm text-[#4E7390]">{f.desc}</p>
+                <p className="mt-1 font-body text-sm text-[#4E7390]">{f.desc}</p>
               </div>
             </div>
           ))}
@@ -225,7 +225,7 @@ export default function AiDetectorView() {
         <section className="mb-6 rounded-2xl border-[3px] border-black bg-[#D9EDFA] p-4 shadow-[4px_4px_0px_#000000]">
           <div className="flex items-start gap-2.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-black bg-[#FFFFFF] text-[#D93A2B] shadow-[2px_2px_0px_#000000]">
-              <span aria-hidden className="material-symbols-outlined text-[20px] font-bold">priority_high</span>
+              <span aria-hidden className="material-symbols-outlined shrink-0 text-[20px] leading-none font-bold">priority_high</span>
             </div>
             <div>
               <h2 className="font-display text-xl font-bold text-[#0B2E4B]">

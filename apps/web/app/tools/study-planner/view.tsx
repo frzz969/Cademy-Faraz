@@ -54,6 +54,12 @@ const inputCls =
 
 export default function PlannerPage() {
   const [tasks, setTasks] = React.useState<Task[]>([]);
+  // Tugas lintas-sumber (jadwal/roadmap/materi) — read-only, berlabel sumber.
+  // Disimpan terpisah dari `tasks` agar save existing (planner-only) tak rusak
+  // dan tak tercipta duplikat source:"planner".
+  const [lintas, setLintas] = React.useState<
+    Array<{ id: string; nama: string; sumber: string; deadline: string; status: Kolom; tag: string }>
+  >([]);
   const [target, setTarget] = React.useState<Target>({ label: "Sidang Akhir Semester Genap", date: "" });
   const [view, setView] = React.useState<"agenda" | "kanban">("agenda");
   const [filterP, setFilterP] = React.useState<"semua" | Prioritas>("semua");
@@ -73,6 +79,8 @@ export default function PlannerPage() {
   const [fDurasi, setFDurasi] = React.useState("60");
   const [fDeskripsi, setFDeskripsi] = React.useState("");
   const firstInputRef = React.useRef<HTMLInputElement>(null);
+  const dialogRef = React.useRef<HTMLDivElement>(null);
+  const pemicuRef = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {
     try {
@@ -91,6 +99,30 @@ export default function PlannerPage() {
         selesai: t.status === "done",
       } satisfies Task));
       setTasks(own.length > 0 ? own : seedTasks());
+      // Lintas-sumber relevan, tanpa duplikat (dedupe by id), read-only.
+      const labelSumber: Record<string, string> = {
+        jadwal: "Jadwal",
+        roadmap: "Roadmap",
+        materi: "Materi",
+      };
+      const seen = new Set<string>();
+      const cross = all
+        .filter((t) => t.source === "jadwal" || t.source === "roadmap" || t.source === "materi")
+        .filter((t) => {
+          if (seen.has(t.id)) return false;
+          seen.add(t.id);
+          return true;
+        })
+        .slice(0, 12)
+        .map((t) => ({
+          id: t.id,
+          nama: t.title,
+          sumber: labelSumber[t.source] ?? t.source,
+          deadline: t.dueDate ?? "",
+          status: t.status as Kolom,
+          tag: t.tag ?? (t.phaseId ? `FASE ${t.phaseId.toUpperCase()}` : ""),
+        }));
+      setLintas(cross);
       const t = localStorage.getItem(TARGET_KEY);
       if (t) {
         const parsed = JSON.parse(t) as Target;
@@ -137,6 +169,48 @@ export default function PlannerPage() {
       }
     }
   }, [target, ready]);
+  // Segarkan daftar lintas-sumber saat tab kembali fokus / storage berubah
+  // (read-only — tak menyentuh state `tasks` milik planner).
+  React.useEffect(() => {
+    if (!ready) return;
+    const labelSumber: Record<string, string> = {
+      jadwal: "Jadwal",
+      roadmap: "Roadmap",
+      materi: "Materi",
+    };
+    function refreshLintas() {
+      try {
+        const all = loadTasks();
+        const seen = new Set<string>();
+        setLintas(
+          all
+            .filter((t) => t.source === "jadwal" || t.source === "roadmap" || t.source === "materi")
+            .filter((t) => {
+              if (seen.has(t.id)) return false;
+              seen.add(t.id);
+              return true;
+            })
+            .slice(0, 12)
+            .map((t) => ({
+              id: t.id,
+              nama: t.title,
+              sumber: labelSumber[t.source] ?? t.source,
+              deadline: t.dueDate ?? "",
+              status: t.status as Kolom,
+              tag: t.tag ?? (t.phaseId ? `FASE ${t.phaseId.toUpperCase()}` : ""),
+            }))
+        );
+      } catch {
+        /* abaikan */
+      }
+    }
+    window.addEventListener("focus", refreshLintas);
+    window.addEventListener("storage", refreshLintas);
+    return () => {
+      window.removeEventListener("focus", refreshLintas);
+      window.removeEventListener("storage", refreshLintas);
+    };
+  }, [ready]);
 
   const showToast = React.useCallback((msg: string) => {
     setToast(msg);
@@ -146,12 +220,48 @@ export default function PlannerPage() {
 
   React.useEffect(() => {
     if (!showForm) return;
+    pemicuRef.current = document.activeElement as HTMLElement | null;
     firstInputRef.current?.focus();
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setShowForm(false);
+      if (e.key === "Escape") {
+        setShowForm(false);
+        return;
+      }
+      // Trap-fokus sederhana: Tab berputar di dalam sheet.
+      if (e.key !== "Tab") return;
+      const box = dialogRef.current;
+      if (!box) return;
+      const daftar = Array.from(
+        box.querySelectorAll<HTMLElement>(
+          "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+        )
+      );
+      if (daftar.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const awal = daftar[0];
+      const akhir = daftar[daftar.length - 1];
+      if (e.shiftKey && document.activeElement === awal) {
+        e.preventDefault();
+        akhir.focus();
+      } else if (!e.shiftKey && document.activeElement === akhir) {
+        e.preventDefault();
+        awal.focus();
+      }
     }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Kunci scroll latar agar sheet saja yang bergulir (tanpa lib baru).
+    const prevOverflow = document.body.style.overflow;
+    const prevOverscroll = document.documentElement.style.overscrollBehavior;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+      document.documentElement.style.overscrollBehavior = prevOverscroll;
+      pemicuRef.current?.focus?.();
+    };
   }, [showForm]);
 
   async function copyLinkWithFallback(text: string): Promise<boolean> {
@@ -531,6 +641,43 @@ export default function PlannerPage() {
         </div>
       )}
 
+      {/* Tugas lintas-sumber — read-only, berlabel sumber. Edit tetap di halaman asalnya. */}
+      <section aria-label="Tugas lintas-sumber" className="mt-5 rounded-2xl border-[3px] border-black bg-brand-panel p-4 shadow-brutal">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-bold">Tugas Lintas-Sumber</h2>
+          <span className="rounded-full border-[3px] border-black bg-white px-2 py-0.5 font-label text-[11px] font-extrabold shadow-brutal-sm">
+            READ-ONLY • {lintas.length}
+          </span>
+        </div>
+        <p className="mt-1 font-body text-xs text-brand-muted">
+          Referensi dari Jadwal, Roadmap, dan Materi — ditampilkan di sini agar selaras, diubah di halaman asalnya.
+        </p>
+        {lintas.length === 0 ? (
+          <p className="mt-3 rounded-xl border-2 border-dashed border-black/30 bg-white p-3 text-center text-xs text-brand-muted">
+            Belum ada tugas lintas-sumber — buat di Jadwal, Roadmap, atau Materi dulu.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {lintas.map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-2 rounded-xl border-2 border-black bg-white px-3 py-2 shadow-[2px_2px_0px_#000000]">
+                <span className="min-w-0">
+                  <span className="block truncate font-body text-sm font-bold text-brand-navy">{t.nama}</span>
+                  <span className="block truncate font-body text-xs text-brand-muted">
+                    {t.sumber}
+                    {t.tag ? ` • ${t.tag}` : ""}
+                    {t.deadline ? ` • ${t.deadline}` : ""}
+                    {` • ${t.status === "done" ? "Selesai" : t.status === "doing" ? "Dikerjakan" : "To Do"}`}
+                  </span>
+                </span>
+                <span className="shrink-0 rounded-full border-2 border-black bg-brand-yellow px-2 py-0.5 font-label text-[10px] font-extrabold uppercase">
+                  {t.sumber}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {/* Tim + undang */}
       <div className="mt-5 flex flex-col space-y-3 rounded-2xl border-[3px] border-black bg-white p-4 shadow-brutal">
         <div className="flex items-center justify-between">
@@ -571,7 +718,7 @@ export default function PlannerPage() {
 
       {showForm && (
         <div className="fixed inset-0 z-[80] flex items-end justify-center bg-brand-navy/40 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label={editingId ? "Edit tugas" : "Tugas baru"} onClick={() => setShowForm(false)}>
-          <div className="max-h-[90vh] w-full max-w-md space-y-3 overflow-y-auto rounded-2xl border-[3px] border-black bg-white p-5 shadow-brutal" onClick={(e) => e.stopPropagation()}>
+          <div ref={dialogRef} tabIndex={-1} className="max-h-[90vh] w-full max-w-md space-y-3 overflow-y-auto rounded-2xl border-[3px] border-black bg-white p-5 shadow-brutal" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="font-display text-xl font-bold">{editingId ? "Edit Tugas" : "Tugas Baru"}</h2>
               <button type="button" onClick={() => setShowForm(false)} className="flex h-10 w-10 items-center justify-center rounded-full border-[3px] border-black bg-white shadow-brutal-sm" aria-label="Tutup">
@@ -626,7 +773,7 @@ export default function PlannerPage() {
       )}
 
       {toast && (
-        <div aria-live="polite" className="fixed bottom-24 left-4 right-4 z-50 flex items-center justify-between rounded-2xl border-[3px] border-black bg-brand-navy px-4 py-3 text-white shadow-brutal">
+        <div aria-live="polite" className="fixed bottom-24 left-4 right-4 z-50 flex max-w-[calc(100vw-2rem)] items-center justify-between gap-2 rounded-2xl border-[3px] border-black bg-brand-navy px-4 py-3 text-white shadow-brutal md:bottom-6 md:left-auto md:right-6 md:w-auto md:min-w-[280px]">
           <span className="font-body text-sm">✔ {toast}</span>
           <button type="button" onClick={() => setToast(null)} className="font-label text-xs font-bold underline">
             Tutup

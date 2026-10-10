@@ -472,8 +472,8 @@ export default function GradePage() {
       </div>
 
       {toast && (
-        <div aria-live="polite" className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl bg-brand-yellow px-4 py-3 font-label text-xs font-bold text-black border-[3px] border-black shadow-brutal">
-          <span aria-hidden className="material-symbols-outlined text-lg">check_circle</span>
+        <div aria-live="polite" className="fixed bottom-24 right-6 z-50 flex max-w-[calc(100vw-3rem)] items-center gap-2 rounded-2xl bg-brand-yellow px-4 py-3 font-label text-xs font-bold text-black border-[3px] border-black shadow-brutal md:bottom-6">
+          <span aria-hidden className="material-symbols-outlined shrink-0 text-lg leading-none">check_circle</span>
           <span>{toast}</span>
         </div>
       )}
