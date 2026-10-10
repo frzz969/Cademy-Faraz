@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import MateriView from "./view";
 
 export const metadata: Metadata = {
-  title: "Materi & Video Pembelajaran — Cademy",
+  title: "Ruang Belajar Materi — Cademy",
   description:
-    "Pelajari materi kuliah lewat playlist video, ringkasan poin kunci, diskusi kelas, dan unduhan ringkasan. Progres tersimpan di browser.",
+    "Ruang belajar fleksibel per mata kuliah: topik, instruksi dosen, catatan, sumber, dan tugas dengan tenggat. Semua tersimpan lokal di perangkatmu.",
 };
 
 export default function MateriPage() {

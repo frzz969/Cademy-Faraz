@@ -2,7 +2,7 @@
 
 // Satu sumber data task lintas halaman (roadmap ↔ jadwal ↔ planner).
 // Semua yang butuh task ambil dari sini; key lama tidak dihapus (backup).
-export type TaskSource = "roadmap" | "jadwal" | "planner";
+export type TaskSource = "roadmap" | "jadwal" | "planner" | "materi";
 export type TaskStatusT = "todo" | "doing" | "done";
 export type PrioritasT = "tinggi" | "sedang" | "rendah" | "normal";
 
