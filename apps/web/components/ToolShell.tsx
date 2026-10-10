@@ -50,9 +50,21 @@ export function ToolShell({
       ? pathname.split("/").filter(Boolean)[1]
       : undefined);
   const idx = resolved ? tools.findIndex((t) => t.slug === resolved) : -1;
-  const prev = idx > 0 ? tools[idx - 1] : undefined;
-  const next = idx >= 0 && idx < tools.length - 1 ? tools[idx + 1] : undefined;
+  // Prev/next hanya antar tool internal — lewati entri status:"external"
+  // agar tidak pernah lontar ke tab luar. Kartu related di bawah tetap
+  // boleh menampilkan entri external (dengan badge).
+  const internal = React.useMemo(
+    () => tools.filter((t) => t.status !== "external"),
+    []
+  );
   const current = idx >= 0 ? tools[idx] : undefined;
+  const pos =
+    current && current.status !== "external"
+      ? internal.findIndex((t) => t.slug === current.slug)
+      : -1;
+  const prev = pos > 0 ? internal[pos - 1] : undefined;
+  const next =
+    pos >= 0 && pos < internal.length - 1 ? internal[pos + 1] : undefined;
   const related = current
     ? tools
         .filter(
@@ -67,14 +79,14 @@ export function ToolShell({
   const showNav = !hideNav && isKnownSlug;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 pb-16 pt-6 sm:px-6">
+    <div className="pb-safe mx-auto w-full max-w-7xl px-4 pb-28 pt-6 sm:px-6 md:pb-16">
       <div className="mb-4 flex items-center justify-between py-2">
         <a
           href="/tools"
           aria-label="Kembali ke direktori tools"
           className="brutal-press inline-flex items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 py-1.5 font-label text-xs font-bold text-brand-navy shadow-[4px_4px_0px_#000000] transition-transform"
         >
-          <span aria-hidden className="material-symbols-outlined text-[18px]">arrow_back</span> Kembali
+          <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">arrow_back</span> Kembali
         </a>
         <p className="font-label text-[11px] uppercase tracking-wider text-brand-muted">
           {eyebrow} / <span className="font-bold text-brand-blue">{title}</span>
@@ -90,7 +102,7 @@ export function ToolShell({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <span aria-hidden className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-[3px] border-black bg-brand-panel text-[#0B2E4B] shadow-brutal">
             {typeof icon === "string" ? (
-              <span className="material-symbols-outlined text-[24px]">{icon}</span>
+              <span className="material-symbols-outlined shrink-0 text-[24px] leading-none">{icon}</span>
             ) : (
               icon
             )}
@@ -137,7 +149,7 @@ export function ToolShell({
                       className="inline-flex items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-4 py-2 font-label text-xs font-bold text-brand-navy shadow-brutal transition-all hover:bg-brand-panel active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       aria-label={`Tool sebelumnya: ${prev.name}`}
                     >
-                      <span aria-hidden className="material-symbols-outlined text-[18px]">arrow_back</span>
+                      <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">arrow_back</span>
                       <span className="max-w-[140px] truncate sm:max-w-[200px]">
                         {prev.name}
                       </span>
@@ -145,13 +157,16 @@ export function ToolShell({
                   );
                 })()
               ) : (
-                <span
-                  className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-4 py-2 font-label text-xs font-bold text-brand-muted opacity-40 shadow-brutal"
+                <button
+                  type="button"
+                  disabled
                   aria-disabled="true"
+                  aria-label="Awal direktori — tidak ada tool sebelumnya"
+                  className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-4 py-2 font-label text-xs font-bold text-brand-muted opacity-40 shadow-brutal"
                 >
-                  <span aria-hidden className="material-symbols-outlined text-[18px]">arrow_back</span>
+                  <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">arrow_back</span>
                   Awal direktori
-                </span>
+                </button>
               )}
               {next ? (
                 (() => {
@@ -168,22 +183,25 @@ export function ToolShell({
                       <span className="max-w-[140px] truncate sm:max-w-[200px]">
                         {next.name}
                       </span>
-                      <span aria-hidden className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                      <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">arrow_forward</span>
                     </a>
                   );
                 })()
               ) : (
-                <span
-                  className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-4 py-2 font-label text-xs font-bold text-brand-muted opacity-40 shadow-brutal"
+                <button
+                  type="button"
+                  disabled
                   aria-disabled="true"
+                  aria-label="Akhir direktori — tidak ada tool berikutnya"
+                  className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-4 py-2 font-label text-xs font-bold text-brand-muted opacity-40 shadow-brutal"
                 >
                   Akhir direktori
-                  <span aria-hidden className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </span>
+                  <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">arrow_forward</span>
+                </button>
               )}
             </div>
             <span className="hidden font-label text-[11px] font-bold text-brand-muted sm:inline">
-              {idx + 1} / {tools.length}
+              {pos >= 0 ? pos + 1 : 0} / {internal.length}
             </span>
           </div>
 
@@ -193,7 +211,7 @@ export function ToolShell({
               className="rounded-2xl border-[3px] border-black bg-brand-panel p-4 shadow-brutal"
             >
               <h2 className="flex items-center gap-1.5 font-display text-base font-bold text-brand-navy">
-                <span aria-hidden className="material-symbols-outlined text-[20px]">widgets</span>
+                <span aria-hidden className="material-symbols-outlined shrink-0 text-[20px] leading-none">widgets</span>
                 Tools terkait
               </h2>
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -209,12 +227,17 @@ export function ToolShell({
                       className="flex items-center gap-2.5 rounded-xl border-[3px] border-black bg-white p-3 shadow-[3px_3px_0px_#000000] transition-all hover:bg-brand-paper active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                     >
                       <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 border-black bg-brand-panel text-brand-navy">
-                        <span className="material-symbols-outlined text-[20px]">{t.icon}</span>
+                        <span className="material-symbols-outlined shrink-0 text-[20px] leading-none">{t.icon}</span>
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate font-display text-sm font-bold text-brand-navy">
                           {t.name}
                         </span>
+                        {t.status === "external" ? (
+                          <span className="mt-0.5 inline-block rounded-full border-2 border-black bg-brand-yellow px-1.5 py-px font-label text-[10px] font-extrabold uppercase tracking-wider text-black">
+                            External • tab baru
+                          </span>
+                        ) : null}
                         <span className="block truncate font-body text-xs text-brand-muted">
                           {t.badge ?? t.description}
                         </span>

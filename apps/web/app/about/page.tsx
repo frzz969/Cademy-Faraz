@@ -218,7 +218,7 @@ export default function AboutPage() {
             ))}
           </div>
           <div className="flex items-start gap-3 rounded-xl border-2 border-black bg-[#D9EDFA] p-4 font-body text-sm text-[#4E7390]">
-            <span aria-hidden className="material-symbols-outlined mt-0.5 text-xl text-[#0E4A6E]">verified</span>
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-xl leading-none text-[#0E4A6E]">verified</span>
             <p className="leading-relaxed">
               Dibangun dengan struktur monorepo teroptimasi. Modul dipisahkan secara independen untuk memastikan waktu muat super cepat, isolasi keamanan tipe end-to-end, dan pembaruan berkala tanpa downtime.
             </p>

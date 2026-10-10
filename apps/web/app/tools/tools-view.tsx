@@ -9,6 +9,7 @@ import {
   type Tool,
   type ToolCategory,
 } from "@cademy/tool-registry";
+import { CategoryPill, CategoryTitle } from "@cademy/ui";
 
 type Cat = ToolCategory | "all";
 
@@ -79,7 +80,7 @@ export function ToolsView() {
       <section className="mb-6 flex flex-col gap-4 pt-4">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border-[3px] border-black bg-[#D9EDFA] px-3 py-1 font-body text-[11px] font-extrabold uppercase text-[#0B2E4B] shadow-[4px_4px_0px_#000000]">
-            <span aria-hidden className="material-symbols-outlined text-[18px]">menu_book</span>
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">menu_book</span>
             <span>Direktori Alat Akademik</span>
           </span>
           <span className="inline-flex items-center rounded-full border-[3px] border-black bg-[#FFFFFF] px-2 py-0.5 font-body text-[11px] font-extrabold uppercase text-[#4E7390] shadow-[4px_4px_0px_#000000]">
@@ -131,21 +132,26 @@ export function ToolsView() {
         </div>
         <div ref={chipsRef} id="chip-kategori" className={`no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 py-1 ${showFilters ? "" : "hidden"}`}>
           {categories.map((c) => (
-            <button
+            <CategoryPill
               key={c.id}
-              type="button"
+              active={cat === c.id}
               onClick={() => setCat(c.id)}
-              className={
-                cat === c.id
-                  ? "whitespace-nowrap rounded-full border-[3px] border-black bg-[#0E4A6E] px-4 py-2 font-body text-xs font-bold text-[#FFFFFF] shadow-[4px_4px_0px_#000000]"
-                  : "whitespace-nowrap rounded-full border-[3px] border-black bg-[#FFFFFF] px-4 py-2 font-body text-xs font-bold text-[#0B2E4B] shadow-[4px_4px_0px_#000000] transition-transform active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-              }
+              aria-pressed={cat === c.id}
             >
               {c.id === "all" ? `Semua (${tools.length})` : c.label}
-            </button>
+            </CategoryPill>
           ))}
         </div>
       </section>
+
+      {cat !== "all" && (
+        <CategoryTitle
+          as="h2"
+          label={categories.find((c) => c.id === cat)?.label ?? cat}
+          count={filtered.length}
+          className="mb-4"
+        />
+      )}
 
       {filtered.length === 0 ? (
         <div className="my-6 flex flex-col items-center justify-center rounded-2xl border-[3px] border-black bg-[#FFFFFF] p-10 text-center shadow-[4px_4px_0px_#000000]">
@@ -175,14 +181,18 @@ export function ToolsView() {
               <article key={t.slug} className="flex flex-col justify-between rounded-2xl border-[3px] border-black bg-[#FFFFFF] p-4 shadow-[4px_4px_0px_#000000] md:p-6">
                 <div className="flex flex-col gap-2">
                   <div className="-mx-4 -mt-4 flex items-center justify-between rounded-t-[13px] border-b-[3px] border-black bg-[#D9EDFA] px-4 pb-2 pt-3 md:-mx-6 md:-mt-6 md:px-6">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl border-[3px] border-black bg-[#FFFFFF] shadow-[4px_4px_0px_#000000]">
-                      <span aria-hidden className="material-symbols-outlined text-[24px] text-[#0B2E4B]">{t.icon}</span>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-[3px] border-black bg-[#FFFFFF] shadow-[4px_4px_0px_#000000]">
+                      <span aria-hidden className="material-symbols-outlined shrink-0 text-[24px] leading-none text-[#0B2E4B]">{t.icon}</span>
                     </div>
                     <span className={`inline-flex items-center rounded-full border-[3px] border-black px-2.5 py-1 font-body text-[11px] font-extrabold uppercase shadow-[4px_4px_0px_#000000] ${badgeCls[t.status]}`}>
                       {t.badge ?? badgeLabel[t.status]}
                     </span>
                   </div>
-                  <h2 className="mt-1 font-display text-xl font-bold text-[#0B2E4B]">{t.name}</h2>
+                  <h2 className="mt-1 font-display text-xl font-bold text-[#0B2E4B]">
+                    <span className="inline-block rounded-lg border-[3px] border-black bg-[#D9EDFA] px-2 py-1 text-[#0B2E4B] shadow-[4px_4px_0px_#000000]">
+                      {t.name}
+                    </span>
+                  </h2>
                   <p className="line-clamp-3 font-body text-sm text-[#4E7390]">{t.description}</p>
                   {(t.meta ?? []).length > 0 && (
                     <div className="flex flex-wrap gap-1.5 pt-1">
@@ -253,21 +263,21 @@ export function ToolsView() {
             className="brutal-press flex h-12 w-full select-none items-center justify-center gap-2 rounded-full border-[3px] border-black bg-[#FFD02B] px-8 font-body text-xs font-bold text-[#000000] shadow-[4px_4px_0px_#000000] sm:w-auto"
           >
             <span>Muat Lebih Banyak Alat</span>
-            <span aria-hidden className="material-symbols-outlined text-[20px]">bolt</span>
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[20px] leading-none">bolt</span>
           </button>
         ) : (
           <p className="flex h-12 w-full items-center justify-center gap-2 rounded-full border-[3px] border-black bg-[#FFFFFF] px-8 font-body text-xs font-bold text-[#0B2E4B] shadow-[4px_4px_0px_#000000] sm:w-auto">
             <span>Koleksi Lengkap Ditampilkan</span>
-            <span aria-hidden className="material-symbols-outlined text-[20px]">check</span>
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[20px] leading-none">check</span>
           </p>
         )}
       </section>
 
       <div
         aria-live="polite"
-        className={`fixed bottom-6 left-4 right-4 z-50 flex items-center gap-3 rounded-2xl border-[3px] border-black bg-[#0B2E4B] p-4 text-[#FFFFFF] shadow-[4px_4px_0px_#000000] transition-all sm:left-auto sm:w-80 ${toast ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"}`}
+        className={`fixed bottom-24 left-4 right-4 z-50 flex items-center gap-3 rounded-2xl border-[3px] border-black bg-[#0B2E4B] p-4 text-[#FFFFFF] shadow-[4px_4px_0px_#000000] transition-all md:bottom-6 md:left-auto md:w-80 ${toast ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"}`}
       >
-        <span className="material-symbols-outlined text-2xl text-[#FFD02B]">{toast?.icon ?? "bookmark"}</span>
+        <span aria-hidden className="material-symbols-outlined shrink-0 text-2xl leading-none text-[#FFD02B]">{toast?.icon ?? "bookmark"}</span>
         <p className="font-body text-sm leading-tight">{toast?.msg ?? "Pilihan Anda telah diperbarui."}</p>
       </div>
     </div>

@@ -79,6 +79,37 @@
   .font-body-jakarta {
     font-family: "Plus Jakarta Sans", system-ui, sans-serif;
   }
+  .pb-safe {
+    /* Cadangan 12px agar di browser tanpa safe-area tetap ada ruang;
+       max() menambah inset bila perangkat berponi. */
+    padding-bottom: 0.75rem;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    min-height: 0.75rem;
+  }
+  .pt-safe {
+    padding-top: 0px;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  /* Kombinasi aditif: pb-* + pb-safe pada elemen yang sama harus
+     menjumlah (bukan saling menimpa) agar konten tak ketutup nav. */
+  .pb-24.pb-safe {
+    padding-bottom: 6rem;
+    padding-bottom: max(6rem, calc(6rem + env(safe-area-inset-bottom, 0px)));
+  }
+  .pb-28.pb-safe {
+    padding-bottom: 7rem;
+    padding-bottom: max(7rem, calc(7rem + env(safe-area-inset-bottom, 0px)));
+  }
+  @media (min-width: 768px) {
+    .md\:pb-8.pb-safe {
+      padding-bottom: 2rem;
+      padding-bottom: max(2rem, calc(2rem + env(safe-area-inset-bottom, 0px)));
+    }
+    .md\:pb-16.pb-safe {
+      padding-bottom: 4rem;
+      padding-bottom: max(4rem, calc(4rem + env(safe-area-inset-bottom, 0px)));
+    }
+  }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
