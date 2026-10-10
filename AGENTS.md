@@ -22,7 +22,7 @@
   - sebelum ngoding: `scripts/sync-dev.ps1` (E: → C:)
   - sesudah ngoding: `scripts/sync-master.ps1` (C: → E:)
 - Toolchain: `pnpm@9`, `node>=18`, Next.js 14 App Router, Tailwind v3, TS strict.
-- Tidak ada git repo, tidak ada CI. **Test**: `node:test` + `tsx` (devDep, nol runner
+- Git: remote `origin` ada (branch `main`). Test: `node:test` + `tsx` (devDep, nol runner
   berat) dijalankan lewat `pnpm test` dari root.
 
 ## Commands
@@ -76,3 +76,24 @@ pnpm --filter @cademy/web build                # next build (21 static routes)
   `coming-soon`, salah — registry sudah 14 dan live).
 - Abaikan: `bag1.zip`, `bag2.zip`, `emoji-*.js`, `fix-material-icons.js`
   (script maintenance sekali pakai).
+
+## Git (tanpa izin eksplisit: edit + verifikasi saja)
+
+- "selesaikan / update / perbaiki / lanjutkan" = ubah kode + jalankan
+  `test` → `typecheck` → `build`. BUKAN izin commit, push, atau deploy.
+- Commit hanya bila user tulis kata "commit"; push hanya bila tulis "push";
+  deploy hanya bila tulis "deploy". Izin satu sesi tidak berlaku untuk sesi berikut.
+- Sebelum ubah kode: `git status --short` + `git branch --show-current` +
+  `git log -5 --oneline`. Jangan hapus/timpa/reset pekerjaan user yang belum di-commit.
+- Scope sekecil mungkin; masalah di luar scope cukup dilaporkan.
+- Bila diminta commit: stage selektif per topik (jangan `add .` bila ada file
+  asing seperti `stitch_academic/`), cek `.env*`/token tidak ikut, pesan
+  **bahasa indonesia, huruf kecil, sederhana** (contoh: "samakan navigasi
+  desktop dan mobile"). Tanpa `feat:`/`fix:`, tanpa emoji. Berhenti setelah
+  commit — jangan push kecuali diminta.
+- Bila diminta push: cek branch, remote, dan commit yang dikirim; tanpa
+  `--force` kecuali diminta eksplisit.
+- Dilarang tanpa izin eksplisit: `commit --amend`, `push --force`,
+  `reset --hard`, `clean`, `rebase`, ubah git config, skip hooks.
+- Laporan akhir selalu sebut: file diubah, hasil verifikasi aktual,
+  commit ya/tidak, push ya/tidak, deploy ya/tidak.

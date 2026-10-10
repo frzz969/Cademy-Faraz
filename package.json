@@ -9,7 +9,7 @@
     "build": "pnpm --filter @cademy/web build",
     "lint": "pnpm --filter @cademy/web lint",
     "typecheck": "pnpm --filter @cademy/web typecheck",
-    "test": "tsx --test \"packages/utils/**/*.test.ts\" \"apps/web/app/tools/literatur/store.test.ts\""
+    "test": "tsx --test \"packages/utils/**/*.test.ts\" \"apps/web/app/tools/literatur/store.test.ts\" \"apps/web/app/tools/materi/store.test.ts\" \"apps/web/app/tools/materi/handoff.test.ts\" \"apps/web/app/tools/materi/transcript-store.test.ts\" \"apps/web/app/tools/jadwal/roadmap-ownership.test.ts\""
   },
   "devDependencies": {
     "tsx": "^4.23.15",

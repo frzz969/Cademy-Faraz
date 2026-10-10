@@ -156,12 +156,12 @@ export const tools: Tool[] = [
     slug: "materi",
     name: "Materi & Modul Belajar",
     description:
-      "Modul belajar mandiri: ringkasan, checklist target, catatan, diskusi lokal & unduhan ringkasan. Tanpa video.",
+      "Ruang belajar fleksibel per mata kuliah: atur topik, catatan, sumber, dan tugas berdeadline yang bisa dikirim ke Jadwal. Cari bahan per topik lewat Smart Handoff Scholar/YouTube, plus Transkrip Belajar untuk tempel teks atau impor .srt/.vtt lalu edit, cari, dan unduh TXT.",
     status: "available",
     category: ["study", "productivity"],
     icon: "play_circle",
-    badge: "Modul + Checklist",
-    meta: ["5 modul", "Ringkasan + unduhan", "Tersimpan lokal"],
+    badge: "Ruang Belajar + Transkrip",
+    meta: ["Topik • catatan • sumber • tugas", "Handoff Scholar • YouTube", "Transkrip .srt/.vtt → TXT"],
   },
   {
     slug: "flowchart-skripsi",
