@@ -2,12 +2,35 @@
 
 import * as React from "react";
 import { ToolShell } from "../../../components/ToolShell";
-import { loadTasks, saveTasks, bySource, type SharedTask } from "../../../components/task-store";
-import { cocokFilterTugas, mondayOfWeek, toISODate } from "@cademy/utils";
+import {
+  loadTasks,
+  saveTasks,
+  bySource,
+  createTask,
+  taskProgress,
+  pushRiwayat,
+  undoTask,
+  bisaUndo,
+  labelUndo,
+  buatCadangan,
+  bacaCadangan,
+  gabungCadangan,
+  uid,
+  type SharedTask,
+  type SubTask,
+  type TaskSource,
+} from "../../../components/task-store";
+import {
+  cocokFilterCepat,
+  mondayOfWeek,
+  toISODate,
+  tugasTerlambat,
+  type FilterCepat,
+} from "@cademy/utils";
 
 type Status = "todo" | "doing" | "done";
-type Prioritas = "tinggi" | "sedang" | "normal";
-type Pandangan = "agenda" | "kanban";
+type Prioritas = "tinggi" | "sedang" | "rendah" | "normal";
+type Sumber = "jadwal" | "roadmap" | "materi" | "pribadi";
 
 interface Agenda {
   id: string;
@@ -34,82 +57,94 @@ export interface Tugas {
   deadline: string;
   progres: number;
   catatan: number;
-  /** Opsi A: true untuk item source:roadmap — tampil read-only, milik flowchart. */
+  notes: string;
+  subtasks: SubTask[];
+  /** asal data — cukup dipakai sebagai metadata kecil, bukan batas edit. */
+  sumber: Sumber;
+  phaseTitle?: string;
+  arsip?: boolean;
+  /** tetapan lama: item source roadmap tetap ditandai, tapi kini bisa diedit. */
   isRoadmap?: boolean;
 }
 
-/**
- * Opsi A — pemetaan tampil jadwal (murni, testable).
- * Roadmap (milik flowchart) ikut TAMPIL dengan penanda isRoadmap,
- * materi/planner dilestarikan via keep-filter saat save.
- */
-export function bagiTampilJadwal(all: SharedTask[]): {
-  own: Tugas[];
-  roadmap: Tugas[];
-  materi: Tugas[];
-} {
-  const own = bySource(all, "jadwal").map((t) => ({
+const PRIORITAS_DARI_STORE = (p: SharedTask["prioritas"]): Prioritas =>
+  p === "tinggi" || p === "sedang" || p === "rendah" || p === "normal"
+    ? p
+    : "sedang";
+
+function keTugas(t: SharedTask, sumber: Sumber): Tugas {
+  return {
     id: t.id,
     judul: t.title,
     deskripsi: t.description ?? "",
-    tag: t.tag ?? "TUGAS",
-    prioritas:
-      t.prioritas === "tinggi" ? "tinggi" : t.prioritas === "normal" ? "normal" : "sedang",
+    tag: t.tag ?? (sumber === "roadmap" ? "ROADMAP" : "UMUM"),
+    prioritas: PRIORITAS_DARI_STORE(t.prioritas),
     status: t.status,
     deadline: t.dueDate ?? "",
-    progres: t.progres ?? (t.status === "done" ? 100 : t.status === "doing" ? 50 : 0),
+    progres: taskProgress(t),
     catatan: t.catatan ?? 0,
-  } satisfies Tugas));
-  const roadmap = bySource(all, "roadmap").map((t) => ({
-    id: t.id,
-    judul: t.title,
-    deskripsi: t.description ?? "",
-    tag: t.phaseId ? `FASE ${t.phaseId.toUpperCase()}` : "ROADMAP",
-    prioritas:
-      t.prioritas === "tinggi" ? "tinggi" : t.prioritas === "normal" ? "normal" : "sedang",
-    status: t.status,
-    deadline: t.dueDate ?? "",
-    progres: t.status === "done" ? 100 : t.status === "doing" ? 50 : 0,
-    catatan: 0,
-    isRoadmap: true,
-  } satisfies Tugas));
-  // Tugas source:"materi" (mis. dari ruang belajar / thesis-checker) tampil
-  // di board lewat filter render — bukan lewat filter keep saat save.
-  const materi = bySource(all, "materi").map((t) => ({
-    id: t.id,
-    judul: t.title,
-    deskripsi: t.description ?? "",
-    tag: (t.tag ?? "MATERI").toUpperCase().slice(0, 16) || "MATERI",
-    prioritas:
-      t.prioritas === "tinggi" ? "tinggi" : t.prioritas === "normal" ? "normal" : "sedang",
-    status: t.status,
-    deadline: t.dueDate ?? "",
-    progres: t.progres ?? (t.status === "done" ? 100 : t.status === "doing" ? 50 : 0),
-    catatan: t.catatan ?? 0,
-  } satisfies Tugas));
-  return { own, roadmap, materi };
+    notes: t.notes ?? "",
+    subtasks: t.subtasks ?? [],
+    sumber,
+    ...(t.phaseTitle ? { phaseTitle: t.phaseTitle } : {}),
+    ...(t.arsip ? { arsip: true } : {}),
+    ...(sumber === "roadmap" ? { isRoadmap: true } : {}),
+  };
 }
 
 /**
- * Opsi A — susunan simpan jadwal (murni, testable).
- * Jadwal HANYA menulis slice jadwal+materi; slice roadmap (milik flowchart)
- * tidak diubah/ditimpa — keep-filter melestarikannya apa adanya.
+ * Pemetaan tampil jadwal (murni, testable).
+ * Semua sumber (jadwal, pribadi, roadmap, materi) tampil di papan yang sama
+ * dan BISA diedit; roadmap ditandai sumbernya saja, bukan read-only.
+ */
+export function bagiTampilJadwal(all: SharedTask[]): {
+  own: Tugas[];
+  pribadi: Tugas[];
+  roadmap: Tugas[];
+  materi: Tugas[];
+} {
+  return {
+    own: bySource(all, "jadwal").map((t) => keTugas(t, "jadwal")),
+    pribadi: bySource(all, "pribadi").map((t) => keTugas(t, "pribadi")),
+    roadmap: bySource(all, "roadmap").map((t) => ({
+      ...keTugas(t, "roadmap"),
+      tag: t.phaseTitle ?? t.tag ?? "ROADMAP",
+    })),
+    materi: bySource(all, "materi").map((t) => keTugas(t, "materi")),
+  };
+}
+
+/**
+ * Susunan simpan jadwal (murni, testable).
+ * Jadwal MENULIS slice jadwal + pribadi, dan MENYINKRONKAN perubahan
+ * (status, deadline, prioritas, judul, catatan, subtugas) untuk item roadmap
+ * dan materi yang tampil di papan — tanpa duplikat dan tanpa merusak sumber
+ * lain (planner) yang tidak tampil di sini.
  */
 export function susunSimpanJadwal(
   all: SharedTask[],
   tugas: Tugas[]
-): { keep: SharedTask[]; jadwalSlice: SharedTask[]; materiSlice: SharedTask[] } {
-  const keep = all.filter((t) => t.source !== "jadwal" && t.source !== "materi");
-  // Id milik sumber lain (roadmap/materi/planner) — jangan disalin ganda
-  // menjadi source:"jadwal" saat save.
-  const nonJadwalIds = new Set(
-    all.filter((t) => t.source !== "jadwal").map((t) => t.id)
+): {
+  keep: SharedTask[];
+  jadwalSlice: SharedTask[];
+  sinkronSlice: SharedTask[];
+} {
+  const tampil = new Map(tugas.map((t) => [t.id, t]));
+  const sumberTulis = new Set<TaskSource>(["jadwal", "pribadi"]);
+  const sumberSinkron = new Set<TaskSource>(["roadmap", "materi"]);
+  // Setiap id yang sudah dimiliki sumber lain (roadmap/materi/planner) TIDAK
+  // boleh ditulis ulang sebagai kartu jadwal — jaga dari duplikat kepemilikan.
+  const idsAsing = new Set(
+    all
+      .filter((t) => t.source !== "jadwal" && t.source !== "pribadi")
+      .map((t) => t.id)
   );
-  const jadwalSlice = tugas
-    .filter((t) => !t.isRoadmap && !t.tag.startsWith("FASE") && !nonJadwalIds.has(t.id))
+
+  const jadwalSlice: SharedTask[] = tugas
+    .filter((t) => sumberTulis.has(t.sumber as TaskSource) && !idsAsing.has(t.id))
     .map((t) => ({
       id: t.id,
-      source: "jadwal" as const,
+      source: t.sumber as TaskSource,
       status: t.status,
       prioritas: t.prioritas,
       title: t.judul,
@@ -118,33 +153,47 @@ export function susunSimpanJadwal(
       tag: t.tag,
       progres: t.progres,
       catatan: t.catatan,
-      createdAt: new Date().toISOString(),
+      notes: t.notes || undefined,
+      subtasks: t.subtasks.length > 0 ? t.subtasks : undefined,
+      createdAt:
+        all.find((a) => a.id === t.id)?.createdAt ?? new Date().toISOString(),
     }));
-  // Sinkronkan status/progres materi yang diubah dari board, tanpa
-  // mengubah source-nya (tetap "materi").
-  const materiSlice = all
-    .filter((t) => t.source === "materi")
+
+  // Sinkronkan field yang diubah dari papan untuk sumber bersama (roadmap/materi),
+  // source dan id tetap milik aslinya.
+  const sinkronSlice: SharedTask[] = all
+    .filter((t) => tampil.has(t.id) && sumberSinkron.has(t.source))
     .map((orig) => {
-      const hit = tugas.find((t) => t.id === orig.id);
-      return hit
-        ? {
-            ...orig,
-            status: hit.status,
-            prioritas: hit.prioritas,
-            dueDate: hit.deadline,
-            progres: hit.progres,
-            catatan: hit.catatan,
-          }
-        : orig;
+      const t = tampil.get(orig.id) as Tugas;
+      return {
+        ...orig,
+        status: t.status,
+        prioritas: t.prioritas,
+        dueDate: t.deadline || undefined,
+        title: t.judul,
+        description: t.deskripsi,
+        tag: orig.tag ?? t.tag,
+        progres: t.progres,
+        notes: t.notes || undefined,
+        subtasks: t.subtasks.length > 0 ? t.subtasks : undefined,
+      };
     });
-  return { keep, jadwalSlice, materiSlice };
+
+  // Slice yang tidak tampil di papan (planner, roadmap/materi tak ter-filter)
+  // dibiarkan apa adanya.
+  const keep = all.filter(
+    (t) => !tampil.has(t.id) && !sumberTulis.has(t.source)
+  );
+  return { keep, jadwalSlice, sinkronSlice };
+}
+
+/** Gabungan semua item yang tampil di papan (untuk state React). */
+export function semuaTampil(part: ReturnType<typeof bagiTampilJadwal>): Tugas[] {
+  return [...part.own, ...part.pribadi, ...part.roadmap, ...part.materi];
 }
 
 const KEY_TUGAS = "cademy:jadwal-tugas";
 const KEY_AGENDA = "cademy:jadwal-agenda";
-
-const uid = (): string =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 // Strip pekan + deadline default dihitung dari tanggal hari ini
 // (dulu statis: 14–19 / Mei 2025 — basi).
@@ -235,74 +284,73 @@ const DEFAULT_AGENDA: Agenda[] = [
   },
 ];
 
+function tugasDasar(t: Partial<Tugas> & Pick<Tugas, "id" | "judul">): Tugas {
+  return {
+    deskripsi: "",
+    tag: "UMUM",
+    prioritas: "sedang",
+    status: "todo",
+    deadline: "",
+    progres: 0,
+    catatan: 0,
+    notes: "",
+    subtasks: [],
+    sumber: "jadwal",
+    ...t,
+  };
+}
+
 const _KINI = new Date();
 const DEFAULT_TUGAS: Tugas[] = [
-  {
+  tugasDasar({
     id: "t-erd",
     judul: "Perbaiki diagram relasi ERD sesuai modul MySQL 8",
-    deskripsi: "",
     tag: "BAB 3",
     prioritas: "tinggi",
-    status: "todo",
     deadline: "Besok",
-    progres: 0,
-    catatan: 0,
-  },
-  {
+  }),
+  tugasDasar({
     id: "t-lampiran",
     judul: "Format tata letak lampiran kuesioner Google Form",
-    deskripsi: "",
     tag: "LAMPIRAN",
     prioritas: "normal",
-    status: "todo",
     deadline: fmtSingkat(geserHari(_KINI, 4)),
-    progres: 0,
-    catatan: 0,
-  },
-  {
+  }),
+  tugasDasar({
     id: "t-paper",
     judul: "Review 3 paper IEEE tentang transformer NLP",
-    deskripsi: "",
     tag: "LITERATUR",
     prioritas: "normal",
-    status: "todo",
     deadline: fmtSingkat(geserHari(_KINI, 6)),
-    progres: 0,
-    catatan: 0,
-  },
-  {
+  }),
+  tugasDasar({
     id: "t-matriks",
     judul: "Matriks revisi tanggapan komentar Dosen Penguji 1",
-    deskripsi: "",
     tag: "REVISI SEMHAS",
     prioritas: "sedang",
     status: "doing",
     deadline: fmtSingkat(geserHari(_KINI, 2)),
     progres: 75,
     catatan: 4,
-  },
-  {
+  }),
+  tugasDasar({
     id: "t-ba",
     judul: "Tanda tangan Berita Acara Pelaksanaan Seminar",
-    deskripsi: "",
     tag: "ADMINISTRASI",
     prioritas: "normal",
     status: "done",
     deadline: `Tuntas ${fmtSingkat(geserHari(_KINI, -2))}`,
     progres: 100,
-    catatan: 0,
-  },
-  {
+  }),
+  tugasDasar({
     id: "t-cetak",
     judul: "Cetak draft naskah sidang jilid lakban 3 eksemplar",
-    deskripsi: "",
     tag: "LOGISTIK",
     prioritas: "normal",
     status: "done",
     deadline: `Tuntas ${fmtSingkat(geserHari(_KINI, -4))}`,
     progres: 100,
-    catatan: 0,
-  },
+  }),
 ];
 
 function load<T>(key: string, fallback: T): T {
@@ -353,9 +401,8 @@ const LABEL_STATUS: Record<Status, string> = {
 export default function JadwalView() {
   const [agenda, setAgenda] = React.useState<Agenda[]>(DEFAULT_AGENDA);
   const [tugas, setTugas] = React.useState<Tugas[]>(DEFAULT_TUGAS);
-  const [pandangan, setPandangan] = React.useState<Pandangan>("agenda");
   const [hariAktif, setHariAktif] = React.useState<number>(() => indeksHariIni());
-  const [filter, setFilter] = React.useState<"semua" | Prioritas>("semua");
+  const [filter, setFilter] = React.useState<FilterCepat>("semua");
   const [cari, setCari] = React.useState("");
   const [formTerbuka, setFormTerbuka] = React.useState(false);
   const [judul, setJudul] = React.useState("");
@@ -363,8 +410,16 @@ export default function JadwalView() {
   const [tag, setTag] = React.useState("BAB 4");
   const [prioritas, setPrioritas] = React.useState<Prioritas>("sedang");
   const [deadline, setDeadline] = React.useState("");
+  const [statusBaru, setStatusBaru] = React.useState<Status>("todo");
   const [toast, setToast] = React.useState<string | null>(null);
   const [siap, setSiap] = React.useState(false);
+  const [undoTersedia, setUndoTersedia] = React.useState(false);
+  const [undoLabel, setUndoLabel] = React.useState<string | null>(null);
+  const [subTerbuka, setSubTerbuka] = React.useState<string | null>(null);
+  const [subJudul, setSubJudul] = React.useState("");
+  const [editId, setEditId] = React.useState<string | null>(null);
+  const [konfirmasiHapus, setKonfirmasiHapus] = React.useState<string | null>(null);
+  const fileImporRef = React.useRef<HTMLInputElement>(null);
   const toastTimer = React.useRef<number | null>(null);
   const firstInputRef = React.useRef<HTMLInputElement>(null);
   const dialogRef = React.useRef<HTMLFormElement>(null);
@@ -372,13 +427,9 @@ export default function JadwalView() {
 
   React.useEffect(() => {
     setAgenda(load<Agenda[]>(KEY_AGENDA, DEFAULT_AGENDA));
-    const all = loadTasks();
-    const { own, roadmap, materi } = bagiTampilJadwal(all);
-    setTugas(
-      own.length > 0 || roadmap.length > 0 || materi.length > 0
-        ? [...own, ...roadmap, ...materi]
-        : DEFAULT_TUGAS
-    );
+    const part = bagiTampilJadwal(loadTasks());
+    const tampil = semuaTampil(part);
+    setTugas(tampil.length > 0 ? tampil : DEFAULT_TUGAS);
     setSiap(true);
   }, []);
 
@@ -386,10 +437,10 @@ export default function JadwalView() {
     if (!siap) return;
     try {
       const all = loadTasks();
-      // Opsi A: save jadwal tidak boleh mengubah/menimpa slice roadmap —
-      // keep-filter melestarikan roadmap (milik flowchart) apa adanya.
-      const { keep, jadwalSlice, materiSlice } = susunSimpanJadwal(all, tugas);
-      saveTasks([...keep, ...jadwalSlice, ...materiSlice]);
+      // Jadwal menulis slice jadwal+pribadi dan menyinkronkan perubahan
+      // roadmap/materi yang tampil di papan (satu sumber kebenaran).
+      const { keep, jadwalSlice, sinkronSlice } = susunSimpanJadwal(all, tugas);
+      saveTasks([...keep, ...jadwalSlice, ...sinkronSlice]);
       localStorage.setItem(KEY_TUGAS, JSON.stringify(jadwalSlice));
     } catch {
       /* abaikan */
@@ -460,12 +511,21 @@ export default function JadwalView() {
   const todo = tugas.filter((t) => t.status === "todo").length;
   const doing = tugas.filter((t) => t.status === "doing").length;
   const done = tugas.filter((t) => t.status === "done").length;
+  const terlambat = tugas.filter((t) =>
+    tugasTerlambat(t.status, t.deadline)
+  ).length;
   const persen = tugas.length === 0 ? 0 : Math.round((done / tugas.length) * 100);
 
   const cocokFilter = React.useCallback(
     (t: Tugas): boolean =>
-      cocokFilterTugas(
-        { judul: t.judul, tag: t.tag, prioritas: t.prioritas },
+      cocokFilterCepat(
+        {
+          judul: t.judul,
+          tag: t.tag,
+          prioritas: t.prioritas,
+          status: t.status,
+          dueDate: t.deadline,
+        },
         filter,
         cari
       ),
@@ -473,8 +533,13 @@ export default function JadwalView() {
   );
 
   const agendaTampil = agenda.filter((a) =>
-    cocokFilterTugas(
-      { judul: a.judul, tag: a.deskripsi, prioritas: a.prioritas },
+    cocokFilterCepat(
+      {
+        judul: a.judul,
+        tag: a.deskripsi,
+        prioritas: a.prioritas,
+        status: a.tuntas ? "done" : "todo",
+      },
       filter,
       cari
     )
@@ -488,12 +553,20 @@ export default function JadwalView() {
     if (target && !target.tuntas) tampilToast("Agenda ditandai tuntas!");
   }
 
+  // Semua mutasi papan cukup mengubah state lokal (Tugas[]); efek [tugas,siap]
+  // menulisnya ke store bersama. Riwayat undo menyimpan snapshot store.
+  function catatUndo(label: string): void {
+    pushRiwayat(label, loadTasks());
+    setUndoTersedia(bisaUndo());
+    setUndoLabel(labelUndo());
+  }
+
   function geserStatus(id: string, arah: -1 | 1): void {
-    // Opsi A: item roadmap read-only — abaikan.
-    if (tugas.some((t) => t.id === id && t.isRoadmap)) return;
+    // Semua sumber bisa digeser — perubahan tersinkron ke store bersama.
+    catatUndo("geser status tugas");
     setTugas((list) =>
       list.map((t) => {
-        if (t.id !== id || t.isRoadmap) return t;
+        if (t.id !== id) return t;
         const idx = URUTAN.indexOf(t.status);
         const next = URUTAN[Math.min(2, Math.max(0, idx + arah))];
         return {
@@ -503,23 +576,132 @@ export default function JadwalView() {
         };
       })
     );
-    tampilToast(
-      arah > 0 ? "Kartu digeser maju satu kolom!" : "Kartu dikembalikan!"
+    tampilToast(arah > 0 ? "Kartu digeser maju satu kolom!" : "Kartu dikembalikan!");
+  }
+
+  function setStatusLangsung(id: string, status: Status): void {
+    catatUndo("ubah status tugas");
+    setTugas((list) =>
+      list.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              status,
+              progres:
+                status === "done" ? 100 : status === "todo" ? 0 : t.progres || 50,
+            }
+          : t
+      )
     );
+    tampilToast(`Status diubah ke ${LABEL_STATUS[status]}.`);
   }
 
   function hapusTugas(id: string): void {
-    // Opsi A: item roadmap read-only — abaikan.
-    if (tugas.some((t) => t.id === id && t.isRoadmap)) return;
+    catatUndo("hapus tugas");
     setTugas((list) => list.filter((t) => t.id !== id));
-    tampilToast("Tugas dihapus dari papan!");
+    setKonfirmasiHapus(null);
+    tampilToast("Tugas dihapus — bisa dibatalkan dengan Undo!");
   }
 
   function ubahProgres(id: string, nilai: number): void {
     const v = Math.min(100, Math.max(0, Math.round(nilai)));
+    setTugas((list) => list.map((t) => (t.id === id ? { ...t, progres: v } : t)));
+  }
+
+  function ubahField(
+    id: string,
+    patch: Partial<Pick<Tugas, "judul" | "deskripsi" | "deadline" | "prioritas" | "tag" | "notes">>
+  ): void {
+    catatUndo("edit tugas");
+    setTugas((list) => list.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }
+
+  function subToggle(id: string, subId: string): void {
+    catatUndo("ubah subtugas");
     setTugas((list) =>
-      list.map((t) => (t.id === id && !t.isRoadmap ? { ...t, progres: v } : t))
+      list.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              subtasks: (t.subtasks ?? []).map((s) =>
+                s.id === subId ? { ...s, done: !s.done } : s
+              ),
+            }
+          : t
+      )
     );
+  }
+
+  function subTambah(id: string, title: string): void {
+    if (!title.trim()) return;
+    catatUndo("tambah subtugas");
+    setTugas((list) =>
+      list.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              subtasks: [
+                ...(t.subtasks ?? []),
+                { id: uid("sub"), title: title.trim(), done: false },
+              ],
+            }
+          : t
+      )
+    );
+  }
+
+  function subHapus(id: string, subId: string): void {
+    catatUndo("hapus subtugas");
+    setTugas((list) =>
+      list.map((t) =>
+        t.id === id
+          ? { ...t, subtasks: (t.subtasks ?? []).filter((s) => s.id !== subId) }
+          : t
+      )
+    );
+  }
+
+  function undo(): void {
+    const kembali = undoTask();
+    if (!kembali) {
+      tampilToast("Tidak ada aksi yang bisa dibatalkan.");
+      return;
+    }
+    const tampil = semuaTampil(bagiTampilJadwal(kembali));
+    setTugas(tampil);
+    saveTasks(kembali);
+    setUndoTersedia(bisaUndo());
+    setUndoLabel(labelUndo());
+    tampilToast("Aksi terakhir dibatalkan.");
+  }
+
+  function eksporData(): void {
+    const semua = loadTasks();
+    const json = JSON.stringify(buatCadangan(semua), null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cademy-tugas-${toISODate(new Date())}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    tampilToast(`Cadangan ${semua.length} tugas diunduh.`);
+  }
+
+  async function imporData(file: File): Promise<void> {
+    const teks = await file.text();
+    const hasil = bacaCadangan(teks);
+    if (!hasil.ok) {
+      tampilToast(`Impor gagal: ${hasil.error}`);
+      return;
+    }
+    const aktif = loadTasks();
+    const digabung = gabungCadangan(aktif, hasil.tasks, "gabung");
+    saveTasks(digabung);
+    setTugas(semuaTampil(bagiTampilJadwal(digabung)));
+    tampilToast(`${hasil.total} tugas dari file diterapkan (data lama aman).`);
   }
 
   function tambahTugas(e: React.FormEvent): void {
@@ -529,24 +711,34 @@ export default function JadwalView() {
       tampilToast("Isi judul tugas terlebih dahulu!");
       return;
     }
-    const baru: Tugas = {
-      id: uid(),
-      judul: nama,
-      deskripsi: deskripsi.trim(),
+    const baru = createTask({
+      id: uid("jadwal"),
+      source: "jadwal",
+      title: nama,
+      description: deskripsi.trim(),
       tag: tag.trim().toUpperCase().slice(0, 16) || "UMUM",
       prioritas,
-      status: "todo",
-      deadline: deadline.trim() || "Tanpa tanggal",
-      progres: 0,
-      catatan: 0,
-    };
-    setTugas((list) => [baru, ...list]);
+      status: statusBaru,
+      dueDate: deadline.trim(),
+    });
+    setTugas((list) => [
+      {
+        ...keTugas(baru, "jadwal"),
+        progres: taskProgress(baru),
+        catatan: 0,
+      },
+      ...list,
+    ]);
     setJudul("");
     setDeskripsi("");
     setDeadline("");
     setFormTerbuka(false);
-    setPandangan("kanban");
-    tampilToast("Tugas baru masuk kolom To Do!");
+    setStatusBaru("todo");
+    tampilToast(
+      statusBaru === "todo"
+        ? "Tugas baru masuk kolom To Do!"
+        : `Tugas baru masuk kolom ${LABEL_STATUS[statusBaru]}!`
+    );
   }
 
   async function salinUndangan(): Promise<void> {
@@ -582,64 +774,7 @@ export default function JadwalView() {
     tampilToast(ok ? "Link halaman disalin ke clipboard!" : "Gagal menyalin — browser memblokir clipboard!");
   }
 
-  const tabAktif =
-    "flex items-center justify-center gap-2 rounded-full border-[3px] border-black bg-brand-blue px-3 py-2.5 font-label text-sm font-bold text-white shadow-brutal transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none";
-  const tabPasif =
-    "flex items-center justify-center gap-2 rounded-full border-[3px] border-black bg-white px-3 py-2.5 font-label text-sm font-bold text-brand-navy shadow-brutal transition-all hover:bg-brand-panel active:translate-x-0.5 active:translate-y-0.5 active:shadow-none";
-
   const renderKartu = (t: Tugas): React.ReactNode => {
-    // Opsi A: item roadmap (milik flowchart) tampil read-only di jadwal:
-    // badge "Roadmap" + deep-link "Edit di Roadmap", tanpa kontrol ubah/hapus.
-    if (t.isRoadmap) {
-      return (
-        <article
-          key={t.id}
-          className="flex flex-col gap-2 rounded-2xl border-[3px] border-black bg-white p-3 shadow-brutal"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <span
-              className={`rounded-full border-[3px] border-black px-2 py-0.5 font-label text-[11px] font-extrabold uppercase tracking-wider shadow-[1px_1px_0px_#000000] ${tagTone(t.tag)}`}
-            >
-              {t.tag}
-            </span>
-            <span className="shrink-0 rounded-full border-[3px] border-black bg-brand-panel px-2 py-0.5 font-label text-[10px] font-extrabold uppercase tracking-wider text-brand-navy shadow-[2px_2px_0px_#000000]">
-              Roadmap
-            </span>
-          </div>
-          <p
-            className={`font-body text-base font-medium leading-snug text-brand-navy ${
-              t.status === "done" ? "line-through opacity-70" : ""
-            }`}
-          >
-            {t.judul}
-          </p>
-          {t.deskripsi ? (
-            <p className="font-body text-sm leading-snug text-brand-muted">{t.deskripsi}</p>
-          ) : null}
-          <div className="flex items-center justify-between pt-1">
-            <span className="flex items-center gap-1 font-label text-xs text-brand-muted">
-              <span aria-hidden className="material-symbols-outlined shrink-0 text-[15px] leading-none">
-                event
-              </span>
-              {t.deadline || "Tanpa tanggal"}
-            </span>
-            <span className="font-label text-[11px] font-bold text-brand-muted">
-              {t.status === "done" ? "Selesai" : t.status === "doing" ? "Dikerjakan" : "To Do"}
-            </span>
-          </div>
-          <a
-            href="/tools/flowchart-skripsi"
-            aria-label={`Edit di Roadmap: ${t.judul}`}
-            className="mt-1 inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full border-2 border-black bg-brand-panel px-3 font-label text-[11px] font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000] transition-all hover:bg-brand-yellow active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-          >
-            <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">
-              account_tree
-            </span>
-            Edit di Roadmap
-          </a>
-        </article>
-      );
-    }
     return (
     <article
       key={t.id}
@@ -651,19 +786,91 @@ export default function JadwalView() {
         >
           {t.tag}
         </span>
-        {t.status === "done" ? (
-          <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none text-brand-blue">
-            verified
+        <span className="flex shrink-0 items-center gap-1.5">
+          {tugasTerlambat(t.status, t.deadline) && (
+            <span className="rounded-full border-2 border-black bg-brand-brick px-2 py-0.5 font-label text-[10px] font-extrabold uppercase tracking-wider text-white">
+              Terlambat
+            </span>
+          )}
+          <span className="shrink-0 rounded-full border-[3px] border-black bg-brand-panel px-2 py-0.5 font-label text-[10px] font-extrabold uppercase tracking-wider text-brand-navy shadow-[2px_2px_0px_#000000]">
+            {t.sumber === "roadmap" ? "Roadmap" : t.sumber === "materi" ? "Materi" : t.sumber === "pribadi" ? "Pribadi" : "Jadwal"}
           </span>
-        ) : (
-          <span
-            aria-hidden
-            className="material-symbols-outlined shrink-0 cursor-grab text-[18px] leading-none text-brand-muted"
-          >
-            drag_indicator
-          </span>
-        )}
+          {t.status === "done" ? (
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none text-brand-blue">
+              verified
+            </span>
+          ) : (
+            <span
+              aria-hidden
+              className="material-symbols-outlined shrink-0 cursor-grab text-[18px] leading-none text-brand-muted"
+            >
+              drag_indicator
+            </span>
+          )}
+        </span>
       </div>
+      {editId === t.id ? (
+        <div className="flex flex-col gap-2">
+          <label className="block">
+            <span className="mb-1 block font-label text-[11px] font-extrabold uppercase text-brand-navy">Judul</span>
+            <input
+              value={t.judul}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                ubahField(t.id, { judul: e.target.value })
+              }
+              className="h-10 w-full rounded-lg border-2 border-black bg-white px-2 font-body text-sm text-brand-navy outline-none focus:bg-brand-paper"
+              aria-label={`Judul ${t.judul}`}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block font-label text-[11px] font-extrabold uppercase text-brand-navy">Catatan</span>
+            <textarea
+              value={t.notes}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                ubahField(t.id, { notes: e.target.value })
+              }
+              rows={2}
+              className="w-full rounded-lg border-2 border-black bg-white px-2 py-1.5 font-body text-sm text-brand-navy outline-none focus:bg-brand-paper"
+              aria-label={`Catatan ${t.judul}`}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block font-label text-[11px] font-extrabold uppercase text-brand-navy">Deadline</span>
+            <input
+              type="date"
+              value={/^\d{4}-\d{2}-\d{2}/.test(t.deadline) ? t.deadline.slice(0, 10) : ""}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                ubahField(t.id, { deadline: e.target.value })
+              }
+              className="h-10 w-full rounded-lg border-2 border-black bg-white px-2 font-body text-sm text-brand-navy outline-none focus:bg-brand-paper"
+              aria-label={`Deadline ${t.judul}`}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {(["tinggi", "sedang", "rendah", "normal"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => ubahField(t.id, { prioritas: p })}
+                aria-pressed={t.prioritas === p}
+                className={`rounded-full border-2 border-black px-2.5 py-1 font-label text-[11px] font-extrabold uppercase ${
+                  t.prioritas === p ? "bg-brand-blue text-white" : "bg-white text-brand-navy"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setEditId(null)}
+            className="self-start rounded-full border-2 border-black bg-brand-yellow px-3 py-1.5 font-label text-[11px] font-extrabold uppercase text-black"
+          >
+            Selesai edit
+          </button>
+        </div>
+      ) : (
+        <>
       <p
         className={`font-body text-base font-medium leading-snug text-brand-navy ${
           t.status === "done" ? "line-through opacity-70" : ""
@@ -673,6 +880,11 @@ export default function JadwalView() {
       </p>
       {t.deskripsi ? (
         <p className="font-body text-sm leading-snug text-brand-muted">{t.deskripsi}</p>
+      ) : null}
+      {t.notes ? (
+        <p className="rounded-lg border-2 border-dashed border-black/25 bg-brand-paper px-2 py-1.5 font-body text-xs text-brand-muted">
+          {t.notes}
+        </p>
       ) : null}
       {t.status === "doing" && (
         <>
@@ -725,52 +937,204 @@ export default function JadwalView() {
           />
         </div>
       )}
-      {t.status !== "done" && (
-        <div className="flex items-center gap-1.5 border-t-2 border-black/10 pt-2">
+      {t.subtasks.length > 0 && (
+        <div className="flex flex-col gap-1.5 rounded-lg border-2 border-black/20 bg-brand-paper p-2">
+          <div className="flex items-center justify-between">
+            <span className="font-label text-[11px] font-extrabold uppercase text-brand-navy">
+              Subtugas {t.subtasks.filter((s) => s.done).length}/{t.subtasks.length}
+            </span>
+            <div className="h-2 w-24 overflow-hidden rounded-full border border-black bg-white">
+              <div
+                className="h-full bg-brand-blue"
+                style={{
+                  width: `${Math.round(
+                    (t.subtasks.filter((s) => s.done).length / t.subtasks.length) * 100
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+          {t.subtasks.map((s) => (
+            <div key={s.id} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={s.done}
+                onChange={() => subToggle(t.id, s.id)}
+                className="h-4 w-4 shrink-0 accent-black"
+                aria-label={`Subtugas: ${s.title}`}
+              />
+              <span className={`min-w-0 flex-1 text-xs ${s.done ? "line-through opacity-70" : ""}`}>
+                {s.title}
+              </span>
+              <button
+                type="button"
+                onClick={() => subHapus(t.id, s.id)}
+                aria-label={`Hapus subtugas: ${s.title}`}
+                className="shrink-0 text-brand-brick"
+              >
+                <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">close</span>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {subTerbuka === t.id && (
+        <form
+          onSubmit={(e: React.FormEvent) => {
+            e.preventDefault();
+            subTambah(t.id, subJudul);
+            setSubJudul("");
+          }}
+          className="flex items-center gap-2"
+        >
+          <input
+            value={subJudul}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubJudul(e.target.value)}
+            placeholder="Judul subtugas…"
+            className="h-9 min-w-0 flex-1 rounded-lg border-2 border-black bg-white px-2 font-body text-xs outline-none focus:bg-brand-paper"
+            aria-label={`Subtugas baru untuk ${t.judul}`}
+          />
+          <button type="submit" className="h-9 shrink-0 rounded-full border-2 border-black bg-brand-yellow px-3 font-label text-[11px] font-extrabold uppercase">
+            Tambah
+          </button>
+        </form>
+      )}
+      {konfirmasiHapus === t.id ? (
+        <div className="rounded-lg border-2 border-black bg-brand-brick p-2.5 text-white">
+          <p className="font-label text-[11px] font-extrabold uppercase">
+            Hapus “{t.judul}”?
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setKonfirmasiHapus(null)}
+              className="h-9 flex-1 rounded-full border-2 border-black bg-white font-label text-[11px] font-extrabold uppercase text-brand-navy"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => hapusTugas(t.id)}
+              className="h-9 flex-1 rounded-full border-2 border-black bg-brand-navy font-label text-[11px] font-extrabold uppercase"
+            >
+              Hapus
+            </button>
+          </div>
+        </div>
+      ) : (
+      <div className="flex flex-wrap items-center gap-1.5 border-t-2 border-black/10 pt-2">
+        <button
+          type="button"
+          onClick={() => geserStatus(t.id, -1)}
+          disabled={t.status === "todo"}
+          aria-label={`Mundur: ${t.judul}`}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-black bg-white text-brand-navy shadow-[2px_2px_0px_#000000] transition-all hover:bg-brand-panel active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-30"
+        >
+          <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">
+            chevron_left
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => geserStatus(t.id, 1)}
+          aria-label={`Maju: ${t.judul}`}
+          className="flex h-11 flex-1 items-center justify-center gap-1 rounded-full border-2 border-black bg-brand-blue px-2 font-label text-[11px] font-extrabold uppercase text-white shadow-[2px_2px_0px_#000000] transition-all hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+        >
+          {t.status === "todo" ? (
+            <>
+              Kerjakan
+              <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">
+                arrow_forward
+              </span>
+            </>
+          ) : (
+            <>
+              Selesaikan
+              <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">
+                check
+              </span>
+            </>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setEditId(editId === t.id ? null : t.id);
+            setSubTerbuka(null);
+          }}
+          aria-label={`Edit: ${t.judul}`}
+          aria-pressed={editId === t.id}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-black shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
+            editId === t.id ? "bg-brand-yellow text-black" : "bg-white text-brand-navy"
+          }`}
+        >
+          <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">
+            edit
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setSubTerbuka(subTerbuka === t.id ? null : t.id);
+            setEditId(null);
+          }}
+          aria-label={`Subtugas: ${t.judul}`}
+          aria-pressed={subTerbuka === t.id}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-black shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
+            subTerbuka === t.id ? "bg-brand-yellow text-black" : "bg-white text-brand-navy"
+          }`}
+        >
+          <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">
+            checklist
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setKonfirmasiHapus(t.id)}
+          aria-label={`Hapus: ${t.judul}`}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-black bg-brand-brick text-white shadow-[2px_2px_0px_#000000] transition-all hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+        >
+          <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">
+            delete
+          </span>
+        </button>
+      </div>
+      )}
+      {t.status === "done" && (
+        <div className="flex flex-wrap items-center gap-1.5 border-t-2 border-black/10 pt-2">
           <button
             type="button"
             onClick={() => geserStatus(t.id, -1)}
-            disabled={t.status === "todo"}
-            aria-label={`Mundur: ${t.judul}`}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-black bg-white text-brand-navy shadow-[2px_2px_0px_#000000] transition-all hover:bg-brand-panel active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-30"
+            aria-label={`Kembalikan: ${t.judul}`}
+            className="h-11 rounded-full border-2 border-black bg-white px-3 font-label text-[11px] font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000]"
           >
-            <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">
-              chevron_left
-            </span>
+            Kembalikan
           </button>
           <button
             type="button"
-            onClick={() => geserStatus(t.id, 1)}
-            aria-label={`Maju: ${t.judul}`}
-            className="flex h-11 flex-1 items-center justify-center gap-1 rounded-full border-2 border-black bg-brand-blue px-2 font-label text-[11px] font-extrabold uppercase text-white shadow-[2px_2px_0px_#000000] transition-all hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+            onClick={() => {
+              setEditId(editId === t.id ? null : t.id);
+              setSubTerbuka(null);
+            }}
+            aria-pressed={editId === t.id}
+            className={`flex h-11 w-11 items-center justify-center rounded-full border-2 border-black ${
+              editId === t.id ? "bg-brand-yellow text-black" : "bg-white text-brand-navy"
+            }`}
+            aria-label={`Edit: ${t.judul}`}
           >
-            {t.status === "todo" ? (
-              <>
-                Kerjakan
-                <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">
-                  arrow_forward
-                </span>
-              </>
-            ) : (
-              <>
-                Selesaikan
-                <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">
-                  check
-                </span>
-              </>
-            )}
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">edit</span>
           </button>
           <button
             type="button"
-            onClick={() => hapusTugas(t.id)}
+            onClick={() => setKonfirmasiHapus(t.id)}
             aria-label={`Hapus: ${t.judul}`}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-black bg-brand-brick text-white shadow-[2px_2px_0px_#000000] transition-all hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+            className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-black bg-brand-brick text-white"
           >
-            <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">
-              delete
-            </span>
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">delete</span>
           </button>
         </div>
+      )}
+        </>
       )}
     </article>
     );
@@ -827,34 +1191,8 @@ export default function JadwalView() {
         </div>
       </div>
 
-      {/* Switcher agenda / kanban (mobile) + filter */}
-      <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl border-[3px] border-black bg-brand-panel p-1.5 shadow-brutal">
-        <button
-          type="button"
-          onClick={() => setPandangan("agenda")}
-          className={pandangan === "agenda" ? tabAktif : tabPasif}
-          aria-pressed={pandangan === "agenda"}
-        >
-          <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">
-            calendar_month
-          </span>
-          Agenda &amp; Timeline
-        </button>
-        <button
-          type="button"
-          onClick={() => setPandangan("kanban")}
-          className={pandangan === "kanban" ? tabAktif : tabPasif}
-          aria-pressed={pandangan === "kanban"}
-        >
-          <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">
-            view_kanban
-          </span>
-          Kanban Board
-        </button>
-      </div>
-
-      {/* Pencarian + filter prioritas */}
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+      {/* Pencarian + filter (prioritas & pintar) — reset filter disediakan */}
+      <div className="mt-4 flex flex-col gap-3">
         <label className="flex h-12 flex-1 items-center gap-2 rounded-xl border-[3px] border-black bg-white px-3 shadow-[3px_3px_0px_#000000] focus-within:bg-brand-paper">
           <span aria-hidden className="material-symbols-outlined shrink-0 text-[20px] leading-none text-brand-muted">
             search
@@ -879,8 +1217,18 @@ export default function JadwalView() {
             </button>
           )}
         </label>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter prioritas">
-          {(["semua", "tinggi", "sedang", "normal"] as const).map((f) => (
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter pintar">
+          {(
+            [
+              ["semua", "Semua"],
+              ["hari-ini", "Hari ini"],
+              ["minggu-ini", "Minggu ini"],
+              ["terlambat", "Terlambat"],
+              ["belum", "Belum"],
+              ["selesai", "Selesai"],
+              ["tinggi", "Prio tinggi"],
+            ] as const
+          ).map(([f, label]) => (
             <button
               key={f}
               type="button"
@@ -892,20 +1240,89 @@ export default function JadwalView() {
                   : "bg-white text-brand-navy hover:bg-brand-panel"
               }`}
             >
-              {f}
+              {label}
             </button>
+          ))}
+          {(filter !== "semua" || cari) && (
+            <button
+              type="button"
+              onClick={() => {
+                setFilter("semua");
+                setCari("");
+              }}
+              className="shrink-0 rounded-full border-2 border-black bg-brand-brick px-3 py-1.5 font-label text-xs font-extrabold uppercase text-white"
+            >
+              Reset filter
+            </button>
+          )}
+        </div>
+
+        {/* Aksi data: undo, ekspor, impor — jujur soal lingkupnya */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={undo}
+            disabled={!undoTersedia}
+            className="inline-flex h-10 items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 font-label text-xs font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-40"
+          >
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">undo</span>
+            Undo{undoLabel ? `: ${undoLabel}` : ""}
+          </button>
+          <button
+            type="button"
+            onClick={eksporData}
+            className="inline-flex h-10 items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 font-label text-xs font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+          >
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">download</span>
+            Ekspor JSON
+          </button>
+          <button
+            type="button"
+            onClick={() => fileImporRef.current?.click()}
+            className="inline-flex h-10 items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 font-label text-xs font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+          >
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">upload</span>
+            Impor JSON
+          </button>
+          <input
+            ref={fileImporRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            aria-label="Impor cadangan JSON"
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              const file = e.target.files?.[0];
+              if (file) void imporData(file);
+              e.target.value = "";
+            }}
+          />
+        </div>
+
+        {/* Ringkasan statistik dari data aktual */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            ["To Do", todo],
+            ["Dikerjakan", doing],
+            ["Selesai", done],
+            ["Terlambat", terlambat],
+          ].map(([label, n]) => (
+            <div
+              key={String(label)}
+              className="rounded-xl border-[3px] border-black bg-white p-3 shadow-brutal-sm"
+            >
+              <p className="font-label text-[11px] font-extrabold uppercase text-brand-muted">
+                {label}
+              </p>
+              <p className="font-display text-2xl font-extrabold text-brand-blue">{n}</p>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Workspace: agenda + kanban */}
-      <div className="mt-5 grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
-        {/* Kolom agenda */}
-        <div
-          className={`flex-col gap-4 lg:col-span-5 ${
-            pandangan === "agenda" ? "flex" : "hidden"
-          } lg:flex`}
-        >
+      {/* Satu kolom vertikal: kalender → agenda → kanban → tim → form */}
+      <div className="mt-5 flex flex-col gap-5">
+        {/* Bagian agenda */}
+        <div className="flex flex-col gap-4">
           {/* Header pekan di luar kartu — referensi: baris label + pill minggu */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2 px-1">
@@ -965,7 +1382,6 @@ export default function JadwalView() {
                   type="button"
                   onClick={() => {
                     setFilter(f);
-                    if (pandangan !== "agenda") setPandangan("agenda");
                   }}
                   className={`rounded-full border-2 border-black px-2 py-1 font-label text-[11px] font-bold ${filter === f ? "bg-brand-blue text-white" : "bg-white"}`}
                 >
@@ -1066,12 +1482,8 @@ export default function JadwalView() {
           ))}
         </div>
 
-        {/* Kolom kanban */}
-        <div
-          className={`flex-col gap-4 lg:col-span-7 ${
-            pandangan === "kanban" ? "flex" : "hidden"
-          } lg:flex`}
-        >
+        {/* Bagian kanban */}
+        <div className="flex flex-col gap-4">
           {/* Header papan — referensi: judul + badge + total, tanpa wrapper kartu */}
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -1263,18 +1675,40 @@ export default function JadwalView() {
                 </label>
                 <label className="block">
                   <span className="mb-1 block font-label text-xs font-extrabold uppercase text-brand-navy">
-                    Deadline
+                    Deadline (opsional)
                   </span>
                   <input
+                    type="date"
                     value={deadline}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setDeadline(e.target.value)
                     }
-                    placeholder="cth. 22 Mei"
-                    className="h-12 w-full rounded-xl border-[3px] border-black bg-white px-3 font-body text-sm text-brand-navy shadow-[3px_3px_0px_#000000] outline-none placeholder:text-brand-muted focus:bg-brand-paper"
+                    className="h-12 w-full rounded-xl border-[3px] border-black bg-white px-3 font-body text-sm text-brand-navy shadow-[3px_3px_0px_#000000] outline-none focus:bg-brand-paper"
                   />
                 </label>
               </div>
+              <fieldset>
+                <legend className="mb-1 font-label text-xs font-extrabold uppercase text-brand-navy">
+                  Status
+                </legend>
+                <div className="flex gap-2">
+                  {(["todo", "doing", "done"] as const).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setStatusBaru(s)}
+                      aria-pressed={statusBaru === s}
+                      className={`flex-1 rounded-full border-2 border-black px-2 py-2 font-label text-xs font-extrabold uppercase shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
+                        statusBaru === s
+                          ? "bg-brand-blue text-white"
+                          : "bg-white text-brand-navy hover:bg-brand-panel"
+                      }`}
+                    >
+                      {LABEL_STATUS[s]}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
               <fieldset>
                 <legend className="mb-1 font-label text-xs font-extrabold uppercase text-brand-navy">
                   Prioritas

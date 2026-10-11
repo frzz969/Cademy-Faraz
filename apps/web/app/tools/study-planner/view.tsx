@@ -2,8 +2,24 @@
 
 import * as React from "react";
 import { ToolShell } from "../../../components/ToolShell";
-import { loadTasks, saveTasks, bySource } from "../../../components/task-store";
-import { mondayOfWeek, toISODate } from "@cademy/utils";
+import {
+  loadTasks,
+  saveTasks,
+  bySource,
+  createTask,
+  removeTask,
+  setTaskStatus,
+  pushRiwayat,
+  undoTask,
+  bisaUndo,
+  labelUndo,
+  buatCadangan,
+  bacaCadangan,
+  gabungCadangan,
+  type SharedTask,
+  type TaskSource,
+} from "../../../components/task-store";
+import { mondayOfWeek, toISODate, tugasTerlambat } from "@cademy/utils";
 
 // Taksonomi prioritas disatukan dengan jadwal: tinggi / sedang / normal.
 type Prioritas = "normal" | "sedang" | "tinggi";
@@ -22,10 +38,31 @@ interface Task {
   selesai: boolean;
 }
 
+/** Tugas lintas-sumber: sumber aslinya tetap, perubahan tersinkron balik. */
+interface Lintas {
+  id: string;
+  nama: string;
+  source: TaskSource;
+  sumber: string;
+  deadline: string;
+  status: Kolom;
+  prioritas: Prioritas;
+  tag: string;
+  notes: string;
+}
+
 interface Target {
   label: string;
   date: string;
 }
+
+const LABEL_SUMBER: Record<string, string> = {
+  jadwal: "Jadwal",
+  roadmap: "Roadmap",
+  materi: "Materi",
+  planner: "Planner",
+  pribadi: "Pribadi",
+};
 
 const KEY = "cademy:planner";
 const TARGET_KEY = "cademy:planner-target";
@@ -54,12 +91,11 @@ const inputCls =
 
 export default function PlannerPage() {
   const [tasks, setTasks] = React.useState<Task[]>([]);
-  // Tugas lintas-sumber (jadwal/roadmap/materi) — read-only, berlabel sumber.
-  // Disimpan terpisah dari `tasks` agar save existing (planner-only) tak rusak
-  // dan tak tercipta duplikat source:"planner".
-  const [lintas, setLintas] = React.useState<
-    Array<{ id: string; nama: string; sumber: string; deadline: string; status: Kolom; tag: string }>
-  >([]);
+  // Tugas lintas-sumber (jadwal/roadmap/materi) — SAMA-SAMA BISA DIEDIT.
+  // Perubahan status/deadline/judul ditulis balik ke store bersama, jadi
+  // tercermin di Jadwal dan Roadmap. Disimpan terpisah dari `tasks` agar
+  // slice planner-only tidak tercampur.
+  const [lintas, setLintas] = React.useState<Lintas[]>([]);
   const [target, setTarget] = React.useState<Target>({ label: "Sidang Akhir Semester Genap", date: "" });
   const [view, setView] = React.useState<"agenda" | "kanban">("agenda");
   const [filterP, setFilterP] = React.useState<"semua" | Prioritas>("semua");
@@ -68,8 +104,128 @@ export default function PlannerPage() {
   const [ready, setReady] = React.useState(false);
   const [showForm, setShowForm] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [undoTersedia, setUndoTersedia] = React.useState(false);
+  const [undoLabel, setUndoLabel] = React.useState<string | null>(null);
+  const [konfirmasiHapus, setKonfirmasiHapus] = React.useState<string | null>(null);
+  const fileImporRef = React.useRef<HTMLInputElement>(null);
   const toastTimer = React.useRef<number | null>(null);
   const dragId = React.useRef<string | null>(null);
+
+  // ── Mutasi bersama: catat riwayat, tulis ke store, sinkronkan tampilan ────
+  function catatUndo(label: string): void {
+    pushRiwayat(label, loadTasks());
+    setUndoTersedia(bisaUndo());
+    setUndoLabel(labelUndo());
+  }
+
+  function muatLintas(all: SharedTask[]): Lintas[] {
+    const seen = new Set<string>();
+    return all
+      .filter(
+        (t) => t.source === "jadwal" || t.source === "roadmap" || t.source === "materi"
+      )
+      .filter((t) => {
+        if (seen.has(t.id)) return false;
+        seen.add(t.id);
+        return true;
+      })
+      .map((t) => ({
+        id: t.id,
+        nama: t.title,
+        source: t.source,
+        sumber: LABEL_SUMBER[t.source] ?? t.source,
+        deadline: t.dueDate ?? "",
+        status: t.status,
+        prioritas:
+          t.prioritas === "tinggi"
+            ? "tinggi"
+            : t.prioritas === "normal" || t.prioritas === "rendah"
+              ? "normal"
+              : "sedang",
+        tag: t.tag ?? (t.phaseTitle ? t.phaseTitle : ""),
+        notes: t.notes ?? "",
+      }));
+  }
+
+  function undo(): void {
+    const kembali = undoTask();
+    if (!kembali) {
+      showToast("Tidak ada aksi yang bisa dibatalkan.");
+      return;
+    }
+    saveTasks(kembali);
+    const all = kembali;
+    setTasks(
+      bySource(all, "planner").map((t) => ({
+        id: t.id,
+        nama: t.title,
+        deadline: t.dueDate ?? "",
+        jam: t.jam ?? "",
+        ruang: t.ruang ?? "",
+        deskripsi: t.description ?? "",
+        prioritas:
+          t.prioritas === "tinggi"
+            ? "tinggi"
+            : t.prioritas === "normal" || t.prioritas === "rendah"
+              ? "normal"
+              : "sedang",
+        durasi: t.durasi ?? 60,
+        kolom: t.status,
+        selesai: t.status === "done",
+      }))
+    );
+    setLintas(muatLintas(all));
+    setUndoTersedia(bisaUndo());
+    setUndoLabel(labelUndo());
+    showToast("Aksi terakhir dibatalkan.");
+  }
+
+  function eksporData(): void {
+    const semua = loadTasks();
+    const json = JSON.stringify(buatCadangan(semua), null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cademy-tugas-${toISODate(new Date())}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`Cadangan ${semua.length} tugas diunduh.`);
+  }
+
+  async function imporData(file: File): Promise<void> {
+    const teks = await file.text();
+    const hasil = bacaCadangan(teks);
+    if (!hasil.ok) {
+      showToast(`Impor gagal: ${hasil.error}`);
+      return;
+    }
+    const digabung = gabungCadangan(loadTasks(), hasil.tasks, "gabung");
+    saveTasks(digabung);
+    setTasks(
+      bySource(digabung, "planner").map((t) => ({
+        id: t.id,
+        nama: t.title,
+        deadline: t.dueDate ?? "",
+        jam: t.jam ?? "",
+        ruang: t.ruang ?? "",
+        deskripsi: t.description ?? "",
+        prioritas:
+          t.prioritas === "tinggi"
+            ? "tinggi"
+            : t.prioritas === "normal" || t.prioritas === "rendah"
+              ? "normal"
+              : "sedang",
+        durasi: t.durasi ?? 60,
+        kolom: t.status,
+        selesai: t.status === "done",
+      }))
+    );
+    setLintas(muatLintas(digabung));
+    showToast(`${hasil.total} tugas dari file diterapkan (data lama aman).`);
+  }
 
   const [fNama, setFNama] = React.useState("");
   const [fDate, setFDate] = React.useState("");
@@ -85,51 +241,34 @@ export default function PlannerPage() {
   React.useEffect(() => {
     try {
       const all = loadTasks();
-      const own = bySource(all, "planner").map((t) => ({
-        id: t.id,
-        nama: t.title,
-        deadline: t.dueDate ?? "",
-        jam: t.jam ?? "",
-        ruang: t.ruang ?? "",
-        deskripsi: t.description ?? "",
-        // "rendah" lama dipetakan ke "normal" agar selaras dengan jadwal.
-        prioritas: t.prioritas === "tinggi" ? "tinggi" : t.prioritas === "normal" || t.prioritas === "rendah" ? "normal" : "sedang",
-        durasi: t.durasi ?? 60,
-        kolom: t.status,
-        selesai: t.status === "done",
-      } satisfies Task));
-      setTasks(own.length > 0 ? own : seedTasks());
-      // Lintas-sumber relevan, tanpa duplikat (dedupe by id), read-only.
-      const labelSumber: Record<string, string> = {
-        jadwal: "Jadwal",
-        roadmap: "Roadmap",
-        materi: "Materi",
-      };
-      const seen = new Set<string>();
-      const cross = all
-        .filter((t) => t.source === "jadwal" || t.source === "roadmap" || t.source === "materi")
-        .filter((t) => {
-          if (seen.has(t.id)) return false;
-          seen.add(t.id);
-          return true;
-        })
-        .slice(0, 12)
-        .map((t) => ({
+      setTasks(
+        bySource(all, "planner").map((t) => ({
           id: t.id,
           nama: t.title,
-          sumber: labelSumber[t.source] ?? t.source,
           deadline: t.dueDate ?? "",
-          status: t.status as Kolom,
-          tag: t.tag ?? (t.phaseId ? `FASE ${t.phaseId.toUpperCase()}` : ""),
-        }));
-      setLintas(cross);
+          jam: t.jam ?? "",
+          ruang: t.ruang ?? "",
+          deskripsi: t.description ?? "",
+          // "rendah" lama dipetakan ke "normal" agar selaras dengan jadwal.
+          prioritas:
+            t.prioritas === "tinggi"
+              ? "tinggi"
+              : t.prioritas === "normal" || t.prioritas === "rendah"
+                ? "normal"
+                : "sedang",
+          durasi: t.durasi ?? 60,
+          kolom: t.status,
+          selesai: t.status === "done",
+        } satisfies Task))
+      );
+      setLintas(muatLintas(all));
       const t = localStorage.getItem(TARGET_KEY);
       if (t) {
         const parsed = JSON.parse(t) as Target;
         if (parsed && typeof parsed.label === "string") setTarget({ label: parsed.label, date: parsed.date ?? "" });
       }
     } catch {
-      setTasks(seedTasks());
+      /* abaikan */
     }
     setReady(true);
   }, []);
@@ -150,7 +289,8 @@ export default function PlannerPage() {
           jam: t.jam,
           ruang: t.ruang,
           durasi: t.durasi,
-          createdAt: new Date().toISOString(),
+          createdAt:
+            all.find((a) => a.id === t.id)?.createdAt ?? new Date().toISOString(),
         }));
         saveTasks([...keep, ...ownSlice]);
         localStorage.setItem(KEY, JSON.stringify(ownSlice));
@@ -169,37 +309,13 @@ export default function PlannerPage() {
       }
     }
   }, [target, ready]);
-  // Segarkan daftar lintas-sumber saat tab kembali fokus / storage berubah
-  // (read-only — tak menyentuh state `tasks` milik planner).
+  // Segarkan daftar lintas-sumber saat tab kembali fokus / storage berubah.
+  // Perubahan dari sini ikut tercermin di Jadwal & Roadmap (satu sumber data).
   React.useEffect(() => {
     if (!ready) return;
-    const labelSumber: Record<string, string> = {
-      jadwal: "Jadwal",
-      roadmap: "Roadmap",
-      materi: "Materi",
-    };
     function refreshLintas() {
       try {
-        const all = loadTasks();
-        const seen = new Set<string>();
-        setLintas(
-          all
-            .filter((t) => t.source === "jadwal" || t.source === "roadmap" || t.source === "materi")
-            .filter((t) => {
-              if (seen.has(t.id)) return false;
-              seen.add(t.id);
-              return true;
-            })
-            .slice(0, 12)
-            .map((t) => ({
-              id: t.id,
-              nama: t.title,
-              sumber: labelSumber[t.source] ?? t.source,
-              deadline: t.dueDate ?? "",
-              status: t.status as Kolom,
-              tag: t.tag ?? (t.phaseId ? `FASE ${t.phaseId.toUpperCase()}` : ""),
-            }))
-        );
+        setLintas(muatLintas(loadTasks()));
       } catch {
         /* abaikan */
       }
@@ -211,6 +327,51 @@ export default function PlannerPage() {
       window.removeEventListener("storage", refreshLintas);
     };
   }, [ready]);
+
+  // ── Tindakan pada tugas lintas-sumber (tersinkron ke store bersama) ───────
+  function geserLintas(id: string, arah: -1 | 1): void {
+    catatUndo("geser status tugas");
+    const urutan: Kolom[] = ["todo", "doing", "done"];
+    const all = loadTasks();
+    const cur = all.find((t) => t.id === id);
+    if (!cur) return;
+    const next = urutan[Math.min(2, Math.max(0, urutan.indexOf(cur.status) + arah))];
+    const diperbarui = setTaskStatus(all, id, next);
+    saveTasks(diperbarui);
+    setLintas(muatLintas(diperbarui));
+    showToast(arah > 0 ? "Kartu digeser maju!" : "Kartu dikembalikan!");
+  }
+
+  function ubahLintas(
+    id: string,
+    patch: Partial<{ nama: string; deadline: string; notes: string; prioritas: Prioritas }>
+  ): void {
+    catatUndo("edit tugas");
+    const all = loadTasks().map((t) =>
+      t.id === id
+        ? {
+            ...t,
+            ...(patch.nama !== undefined ? { title: patch.nama } : {}),
+            ...(patch.deadline !== undefined
+              ? { dueDate: patch.deadline || undefined }
+              : {}),
+            ...(patch.notes !== undefined ? { notes: patch.notes } : {}),
+            ...(patch.prioritas !== undefined ? { prioritas: patch.prioritas } : {}),
+          }
+        : t
+    );
+    saveTasks(all);
+    setLintas(muatLintas(all));
+  }
+
+  function hapusLintas(id: string): void {
+    catatUndo("hapus tugas");
+    const diperbarui = removeTask(loadTasks(), id);
+    saveTasks(diperbarui);
+    setLintas(muatLintas(diperbarui));
+    setKonfirmasiHapus(null);
+    showToast("Tugas dihapus — bisa dibatalkan dengan Undo!");
+  }
 
   const showToast = React.useCallback((msg: string) => {
     setToast(msg);
@@ -641,37 +802,196 @@ export default function PlannerPage() {
         </div>
       )}
 
-      {/* Tugas lintas-sumber — read-only, berlabel sumber. Edit tetap di halaman asalnya. */}
+      {/* Tugas lintas-sumber — BISA DIEDIT langsung, perubahan tersinkron. */}
       <section aria-label="Tugas lintas-sumber" className="mt-5 rounded-2xl border-[3px] border-black bg-brand-panel p-4 shadow-brutal">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-lg font-bold">Tugas Lintas-Sumber</h2>
-          <span className="rounded-full border-[3px] border-black bg-white px-2 py-0.5 font-label text-[11px] font-extrabold shadow-brutal-sm">
-            READ-ONLY • {lintas.length}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border-[3px] border-black bg-white px-2 py-0.5 font-label text-[11px] font-extrabold shadow-brutal-sm">
+              {lintas.length} Tugas
+            </span>
+            <button
+              type="button"
+              onClick={undo}
+              disabled={!undoTersedia}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 font-label text-[11px] font-extrabold uppercase text-brand-navy shadow-brutal-sm transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-40"
+            >
+              <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">undo</span>
+              Undo{undoLabel ? `: ${undoLabel}` : ""}
+            </button>
+            <button
+              type="button"
+              onClick={eksporData}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 font-label text-[11px] font-extrabold uppercase text-brand-navy shadow-brutal-sm transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+            >
+              <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">download</span>
+              Ekspor JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => fileImporRef.current?.click()}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 font-label text-[11px] font-extrabold uppercase text-brand-navy shadow-brutal-sm transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+            >
+              <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">upload</span>
+              Impor JSON
+            </button>
+            <input
+              ref={fileImporRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              aria-label="Impor cadangan JSON"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const file = e.target.files?.[0];
+                if (file) void imporData(file);
+                e.target.value = "";
+              }}
+            />
+          </div>
         </div>
         <p className="mt-1 font-body text-xs text-brand-muted">
-          Referensi dari Jadwal, Roadmap, dan Materi — ditampilkan di sini agar selaras, diubah di halaman asalnya.
+          Tugas dari Jadwal, Roadmap, dan Materi bisa dikelola langsung di sini. Perubahan status,
+          deadline, judul, atau catatan otomatis tercermin di halaman asalnya (satu sumber data).
         </p>
         {lintas.length === 0 ? (
           <p className="mt-3 rounded-xl border-2 border-dashed border-black/30 bg-white p-3 text-center text-xs text-brand-muted">
-            Belum ada tugas lintas-sumber — buat di Jadwal, Roadmap, atau Materi dulu.
+            Belum ada tugas lintas-sumber — buat di Jadwal, Roadmap, atau pakai tombol Tambah Tugas di bawah.
           </p>
         ) : (
           <ul className="mt-3 space-y-2">
             {lintas.map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-2 rounded-xl border-2 border-black bg-white px-3 py-2 shadow-[2px_2px_0px_#000000]">
-                <span className="min-w-0">
-                  <span className="block truncate font-body text-sm font-bold text-brand-navy">{t.nama}</span>
-                  <span className="block truncate font-body text-xs text-brand-muted">
-                    {t.sumber}
-                    {t.tag ? ` • ${t.tag}` : ""}
-                    {t.deadline ? ` • ${t.deadline}` : ""}
-                    {` • ${t.status === "done" ? "Selesai" : t.status === "doing" ? "Dikerjakan" : "To Do"}`}
+              <li key={t.id} className="rounded-xl border-2 border-black bg-white px-3 py-2 shadow-[2px_2px_0px_#000000]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="min-w-0 flex-1">
+                    {editingId === t.id ? (
+                      <input
+                        value={t.nama}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          ubahLintas(t.id, { nama: e.target.value })
+                        }
+                        className="h-9 w-full rounded-lg border-2 border-black bg-white px-2 font-body text-sm outline-none focus:bg-brand-paper"
+                        aria-label={`Judul ${t.nama}`}
+                      />
+                    ) : (
+                      <span className="block truncate font-body text-sm font-bold text-brand-navy">{t.nama}</span>
+                    )}
+                    <span className="mt-0.5 flex flex-wrap items-center gap-x-2 font-body text-xs text-brand-muted">
+                      <span className="font-label text-[10px] font-extrabold uppercase">
+                        {t.sumber}
+                        {t.tag ? ` • ${t.tag}` : ""}
+                      </span>
+                      {tugasTerlambat(t.status, t.deadline) && (
+                        <span className="rounded-full border-2 border-black bg-brand-brick px-1.5 py-0 font-label text-[10px] font-extrabold uppercase text-white">
+                          Terlambat
+                        </span>
+                      )}
+                      <span>{t.status === "done" ? "Selesai" : t.status === "doing" ? "Dikerjakan" : "To Do"}</span>
+                    </span>
                   </span>
-                </span>
-                <span className="shrink-0 rounded-full border-2 border-black bg-brand-yellow px-2 py-0.5 font-label text-[10px] font-extrabold uppercase">
-                  {t.sumber}
-                </span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {konfirmasiHapus === t.id ? (
+                      <span className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setKonfirmasiHapus(null)}
+                          className="h-9 rounded-full border-2 border-black bg-white px-2.5 font-label text-[10px] font-extrabold uppercase"
+                        >
+                          Batal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => hapusLintas(t.id)}
+                          className="h-9 rounded-full border-2 border-black bg-brand-navy px-2.5 font-label text-[10px] font-extrabold uppercase text-white"
+                        >
+                          Hapus
+                        </button>
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => geserLintas(t.id, -1)}
+                          disabled={t.status === "todo"}
+                          aria-label={`Mundur: ${t.nama}`}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-black bg-white disabled:opacity-30"
+                        >
+                          <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">chevron_left</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => geserLintas(t.id, 1)}
+                          aria-label={`Maju: ${t.nama}`}
+                          className="flex h-9 items-center justify-center rounded-full border-2 border-black bg-brand-blue px-2 font-label text-[10px] font-extrabold uppercase text-white"
+                        >
+                          {t.status === "todo" ? "Kerjakan" : "Selesaikan"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(editingId === t.id ? null : t.id)}
+                          aria-pressed={editingId === t.id}
+                          aria-label={`Edit: ${t.nama}`}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full border-2 border-black ${
+                            editingId === t.id ? "bg-brand-yellow text-black" : "bg-white"
+                          }`}
+                        >
+                          <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setKonfirmasiHapus(t.id)}
+                          aria-label={`Hapus: ${t.nama}`}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-black bg-brand-brick text-white"
+                        >
+                          <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">delete</span>
+                        </button>
+                      </>
+                    )}
+                  </span>
+                </div>
+                {editingId === t.id && (
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1 block font-label text-[10px] font-extrabold uppercase text-brand-navy">Deadline</span>
+                      <input
+                        type="date"
+                        value={/^\d{4}-\d{2}-\d{2}/.test(t.deadline) ? t.deadline.slice(0, 10) : ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          ubahLintas(t.id, { deadline: e.target.value })
+                        }
+                        className="h-9 w-full rounded-lg border-2 border-black bg-white px-2 font-label text-xs"
+                        aria-label={`Deadline ${t.nama}`}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block font-label text-[10px] font-extrabold uppercase text-brand-navy">Prioritas</span>
+                      <select
+                        value={t.prioritas}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                          ubahLintas(t.id, { prioritas: e.target.value as Prioritas })
+                        }
+                        className="h-9 w-full rounded-lg border-2 border-black bg-white px-2 font-label text-xs"
+                        aria-label={`Prioritas ${t.nama}`}
+                      >
+                        <option value="tinggi">Tinggi</option>
+                        <option value="sedang">Sedang</option>
+                        <option value="normal">Normal</option>
+                      </select>
+                    </label>
+                    <label className="block sm:col-span-2">
+                      <span className="mb-1 block font-label text-[10px] font-extrabold uppercase text-brand-navy">Catatan</span>
+                      <textarea
+                        value={t.notes}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                          ubahLintas(t.id, { notes: e.target.value })
+                        }
+                        rows={2}
+                        placeholder="Catatan tugas…"
+                        className="w-full rounded-lg border-2 border-black bg-white px-2 py-1.5 font-body text-sm outline-none focus:bg-brand-paper"
+                        aria-label={`Catatan ${t.nama}`}
+                      />
+                    </label>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

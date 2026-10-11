@@ -8,6 +8,7 @@ import {
 import {
   bagiTampilJadwal,
   susunSimpanJadwal,
+  semuaTampil,
   type Tugas,
 } from "./view";
 import {
@@ -15,7 +16,8 @@ import {
   type Phase,
 } from "../flowchart-skripsi/view";
 
-// Opsi A — bukti kepemilikan tunggal source:roadmap.
+// Kontrak baru: satu sumber data. Jadwal boleh MENGUBAH tugas roadmap
+// (status, deadline, catatan) dan perubahan itu tersinkron tanpa duplikat.
 // localStorage tidak ada di node: stub minimal untuk task-store.
 const bak = new Map<string, string>();
 (globalThis as unknown as Record<string, unknown>).localStorage = {
@@ -60,47 +62,61 @@ function tugasRoadmap(
   };
 }
 
-describe("Opsi A — roadmap diubah di flowchart terlihat di jadwal", () => {
-  it("bagiTampilJadwal menampilkan item roadmap read-only apa adanya", () => {
+describe("roadmap tampil di papan jadwal dan bisa diedit", () => {
+  it("bagiTampilJadwal memetakan item roadmap ke kartu papan", () => {
     saveTasks([tugasRoadmap()]);
-    const tampil = bagiTampilJadwal(loadTasks());
-    assert.equal(tampil.roadmap.length, 1);
-    const kartu = tampil.roadmap[0];
+    const part = bagiTampilJadwal(loadTasks());
+    assert.equal(part.roadmap.length, 1);
+    const kartu = part.roadmap[0];
+    assert.equal(kartu.sumber, "roadmap");
     assert.equal(kartu.isRoadmap, true);
     assert.equal(kartu.judul, "Langkah 1");
     assert.equal(kartu.status, "doing");
     assert.equal(kartu.deadline, "2026-11-01");
     assert.equal(kartu.prioritas, "tinggi");
-    assert.match(kartu.tag, /^FASE P1$/);
+  });
+
+  it("semuaTampil menggabung jadwal + pribadi + roadmap + materi", () => {
+    const jadwal: SharedTask = {
+      id: "j1",
+      source: "jadwal",
+      status: "todo",
+      prioritas: "sedang",
+      title: "Tugas jadwal",
+      createdAt: "2026-01-02T00:00:00.000Z",
+    };
+    saveTasks([tugasRoadmap(), jadwal]);
+    const tampil = semuaTampil(bagiTampilJadwal(loadTasks()));
+    assert.equal(tampil.length, 2);
+    assert.ok(tampil.some((t) => t.sumber === "roadmap"));
+    assert.ok(tampil.some((t) => t.sumber === "jadwal"));
   });
 });
 
-describe("Opsi A — save di jadwal tidak merusak roadmap", () => {
-  it("susunSimpanJadwal melestarikan slice roadmap byte-identik walau tampilan diubah", () => {
+describe("satu sumber kebenaran — perubahan dari jadwal tersinkron ke roadmap", () => {
+  it("ubah status & deadline roadmap dari papan tersimpan di slice roadmap", () => {
     const sebelum = tugasRoadmap();
-    const materi: SharedTask = {
-      id: "m1",
-      source: "materi",
-      status: "todo",
-      prioritas: "sedang",
-      title: "Modul 1",
-      createdAt: "2026-01-02T00:00:00.000Z",
-    };
     const planner: SharedTask = {
       id: "p9",
       source: "planner",
       status: "todo",
       prioritas: "sedang",
       title: "Rencana Pekan Ini",
+      notes: "catatan planner",
       createdAt: "2026-01-03T00:00:00.000Z",
     };
-    saveTasks([sebelum, materi, planner]);
+    saveTasks([sebelum, planner]);
 
-    // Simulasi state board: roadmap tampil (isRoadmap) + usaha ubah status
-    // di tampilan + satu tugas jadwal baru.
-    const { own, roadmap, materi: mat } = bagiTampilJadwal(loadTasks());
+    const { own, roadmap } = bagiTampilJadwal(loadTasks());
     assert.equal(own.length, 0);
-    const dirusak: Tugas = { ...roadmap[0], status: "done", progres: 100 };
+
+    // Simulasi pengguna menyelesaikan + mengubah deadline kartu roadmap
+    const diubah: Tugas = {
+      ...roadmap[0],
+      status: "done",
+      deadline: "2026-11-20",
+      progres: 100,
+    };
     const baru: Tugas = {
       id: "j1",
       judul: "Tugas jadwal baru",
@@ -111,28 +127,41 @@ describe("Opsi A — save di jadwal tidak merusak roadmap", () => {
       deadline: "",
       progres: 0,
       catatan: 0,
+      notes: "",
+      subtasks: [],
+      sumber: "jadwal",
     };
-    const { keep, jadwalSlice, materiSlice } = susunSimpanJadwal(
+    const { keep, jadwalSlice, sinkronSlice } = susunSimpanJadwal(
       loadTasks(),
-      [baru, dirusak, ...mat]
+      [baru, diubah]
     );
-    saveTasks([...keep, ...jadwalSlice, ...materiSlice]);
+    saveTasks([...keep, ...jadwalSlice, ...sinkronSlice]);
 
     const sesudah = loadTasks();
     const rm = sesudah.find((t) => t.id === "roadmap:p1:s1");
-    assert.deepEqual(rm, sebelum); // byte-identik: doing/tinggi/dueDate utuh
+    // Perubahan dari jadwal TERSINKRON ke roadmap (bukan lagi read-only).
+    assert.equal(rm?.status, "done");
+    assert.equal(rm?.dueDate, "2026-11-20");
+    assert.equal(rm?.source, "roadmap");
+    assert.equal(sesudah.filter((t) => t.source === "roadmap").length, 1);
+    // Tugas dari sumber lain tetap utuh.
+    const pl = sesudah.find((t) => t.id === "p9");
+    assert.equal(pl?.notes, "catatan planner");
     assert.ok(sesudah.find((t) => t.id === "j1" && t.source === "jadwal"));
-    assert.ok(sesudah.find((t) => t.id === "p9" && t.source === "planner"));
-    assert.ok(sesudah.find((t) => t.id === "m1" && t.source === "materi"));
-    assert.equal(
-      sesudah.filter((t) => t.source === "roadmap").length,
-      1,
-      "tidak ada duplikat roadmap"
+  });
+
+  it("id dari sumber lain tidak disalin ganda jadi source jadwal", () => {
+    saveTasks([tugasRoadmap()]);
+    const { roadmap } = bagiTampilJadwal(loadTasks());
+    const { jadwalSlice } = susunSimpanJadwal(
+      loadTasks(),
+      [{ ...roadmap[0], sumber: "jadwal" as const }]
     );
+    assert.equal(jadwalSlice.length, 0, "roadmap tidak boleh jadi kartu jadwal");
   });
 });
 
-describe("Opsi A — flowchart tidak rebuild memaksa todo/sedang", () => {
+describe("flowchart tidak rebuild memaksa todo/sedang", () => {
   it("susunRoadmap mempertahankan doing/dueDate/prioritas/createdAt slice", () => {
     const lama = tugasRoadmap();
     const hasil = susunRoadmap(FASE_UJI, { s1: false }, [lama]);
@@ -150,5 +179,16 @@ describe("Opsi A — flowchart tidak rebuild memaksa todo/sedang", () => {
       susunRoadmap(FASE_UJI, { s1: false }, [lama])[0].status,
       "todo"
     );
+  });
+
+  it("field tambahan (subtugas/catatan) ikut dipertahankan saat susun ulang", () => {
+    const lama = tugasRoadmap({
+      notes: "ide bab 2",
+      subtasks: [{ id: "sub-1", title: "latar belakang", done: true }],
+    });
+    const hasil = susunRoadmap(FASE_UJI, { s1: true }, [lama]);
+    assert.equal(hasil[0].notes, "ide bab 2");
+    assert.equal(hasil[0].subtasks?.length, 1);
+    assert.equal(hasil[0].subtasks?.[0].done, true);
   });
 });

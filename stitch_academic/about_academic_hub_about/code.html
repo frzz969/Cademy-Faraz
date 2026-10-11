@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Academic Hub — Essential Student &amp; Research Utilities</title>
+<!-- Google Fonts: Bricolage Grotesque & Space Grotesk -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'page-bg': '#EAF5FC',
+            'card-bg': '#FFFFFF',
+            'panel-bg': '#D9EDFA',
+            'btn-primary': '#0E4A6E',
+            'head-navy': '#0B2E4B',
+            'text-muted': '#4E7390',
+            'accent-yellow': '#FFD02B',
+            'brick-red': '#D93A2B',
+            'ink-black': '#000000'
+          },
+          fontFamily: {
+            comic: ['"Bricolage Grotesque"', 'system-ui', 'sans-serif'],
+            body: ['"Space Grotesk"', 'monospace', 'sans-serif']
+          },
+          boxShadow: {
+            'brutal-sm': '2px 2px 0px #000000',
+            'brutal': '4px 4px 0px #000000',
+            'brutal-lg': '6px 6px 0px #000000',
+            'brutal-xl': '8px 8px 0px #000000'
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Style Configurations -->
+<style data-purpose="custom-typography">
+    body {
+      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      background-color: #EAF5FC;
+      color: #0B2E4B;
+      -webkit-tap-highlight-color: transparent;
+    }
+    h1, h2, h3, h4, .font-heading {
+      font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    }
+  </style>
+<style data-purpose="brutalist-utilities">
+    /* Comic border utility classes */
+    .brutal-border {
+      border: 3px solid #000000;
+    }
+    .brutal-border-2 {
+      border: 2px solid #000000;
+    }
+    .brutal-shadow {
+      box-shadow: 4px 4px 0px #000000;
+    }
+    .brutal-shadow-sm {
+      box-shadow: 2px 2px 0px #000000;
+    }
+    .brutal-shadow-lg {
+      box-shadow: 6px 6px 0px #000000;
+    }
+    .brutal-press:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0px #000000;
+    }
+  </style>
+<!-- END: Style Configurations -->
+<meta content="web_standard" name="shell-type"/><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-[#EAF5FC] text-[#0B2E4B] antialiased selection:bg-[#FFD02B] selection:text-[#000000]">
+<!-- BEGIN: MainHeader -->
+<header class="sticky top-0 z-50 bg-[#FFFFFF] border-b-[3px] border-[#000000] px-4 py-3 sm:px-6">
+<div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+<!-- Brand Logo -->
+<a aria-label="Academic Hub Home" class="flex items-center gap-2 group focus:outline-none" href="#">
+<div class="w-10 h-10 rounded-xl bg-[#0E4A6E] brutal-border flex items-center justify-center shadow-[3px_3px_0px_#000000] group-hover:bg-[#FFD02B] transition-colors">
+<span class="text-xl font-black text-white group-hover:text-[#000000]">🎓</span>
+</div>
+<div class="leading-none">
+<span class="font-heading text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B2E4B] block">
+            Academic<span class="text-[#0E4A6E]">Hub</span>
+</span>
+<span class="text-[10px] font-bold uppercase tracking-wider text-[#4E7390] block">v2.4 Comic Suite</span>
+</div>
+</a>
+<!-- Desktop Navigation Menu -->
+<nav aria-label="Main Navigation" class="hidden md:flex items-center gap-2">
+<a class="px-3.5 py-1.5 rounded-full brutal-border bg-[#FFFFFF] text-xs font-bold uppercase tracking-wider text-[#0B2E4B] shadow-[2px_2px_0px_#000000] hover:bg-[#D9EDFA] brutal-press transition-colors" href="#tools">
+          Tools
+        </a>
+<a class="px-3.5 py-1.5 rounded-full brutal-border bg-[#FFFFFF] text-xs font-bold uppercase tracking-wider text-[#0B2E4B] shadow-[2px_2px_0px_#000000] hover:bg-[#D9EDFA] brutal-press transition-colors" href="#categories">
+          Categories
+        </a>
+<a class="px-3.5 py-1.5 rounded-full brutal-border bg-[#FFFFFF] text-xs font-bold uppercase tracking-wider text-[#0B2E4B] shadow-[2px_2px_0px_#000000] hover:bg-[#D9EDFA] brutal-press transition-colors" href="#stats">
+          About
+        </a>
+</nav>
+<!-- Right Action & Mobile Menu Toggle -->
+<div class="flex items-center gap-2">
+<!-- Search Trigger / Bookmark -->
+<button aria-label="Quick Search" class="w-10 h-10 rounded-full bg-[#D9EDFA] brutal-border flex items-center justify-center shadow-[3px_3px_0px_#000000] brutal-press focus:outline-none hover:bg-[#FFD02B]" type="button">
+<svg class="w-5 h-5 text-[#0B2E4B]" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24">
+<path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Academic Hub ID Pill -->
+<a class="hidden sm:inline-flex items-center justify-center px-4 h-10 rounded-xl bg-[#0E4A6E] text-[#FFFFFF] font-bold text-xs uppercase tracking-wider brutal-border shadow-[3px_3px_0px_#000000] brutal-press hover:bg-[#0B2E4B]" href="#login">
+          Log In
+        </a>
+</div>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: MainContent -->
+<main class="w-full"><div class="flex flex-col w-full">
+<div class="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-10 space-y-12">
+<!-- SECTION 1: HERO -->
+<section class="flex flex-col items-start gap-4">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-[#D9EDFA] text-[#0B2E4B] rounded-full brutal-border-2 brutal-shadow-sm font-label-caps text-xs uppercase tracking-wider font-bold">
+<span class="w-2 h-2 rounded-full bg-[#0E4A6E] inline-block animate-pulse"></span>
+        TENTANG KAMI • V2.4
+      </div>
+<div class="flex flex-col gap-2 max-w-3xl">
+<h1 class="font-heading text-3xl sm:text-5xl font-black text-[#0B2E4B] tracking-tight leading-tight">
+          About <span class="bg-[#FFD02B] px-2 py-0.5 rounded-lg brutal-border-2 brutal-shadow-sm inline-block text-[#0B2E4B]">Academic Hub</span>
+</h1>
+<p class="text-lg sm:text-xl text-[#4E7390] font-medium mt-1">
+          Academic tools in one place. Tools for students, research, and everyday academic work.
+        </p>
+</div>
+<div class="flex flex-wrap items-center gap-2 pt-1">
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFFFFF] text-[#0B2E4B] brutal-border-2 brutal-shadow-sm text-xs sm:text-sm font-bold">
+<span class="material-symbols-outlined text-base text-[#0E4A6E]">school</span>
+          Platform Terbuka Mahasiswa &amp; Peneliti
+        </span>
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D9EDFA] text-[#0B2E4B] brutal-border-2 brutal-shadow-sm text-xs uppercase font-bold">
+          100% Bebas Iklan
+        </span>
+</div>
+</section>
+<!-- SECTION 2: MISI CARDS -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-5">
+<!-- Card 1: Satu Rumah -->
+<div class="bg-[#FFFFFF] rounded-2xl p-6 brutal-border brutal-shadow flex flex-col justify-between relative overflow-hidden group hover:-translate-y-1 transition-transform">
+<div class="absolute -right-3 -top-3 w-16 h-16 bg-[#D9EDFA] rounded-full brutal-border-2 -z-0 opacity-80 group-hover:scale-110 transition-transform"></div>
+<div class="relative z-10 space-y-4">
+<div class="w-12 h-12 rounded-xl bg-[#D9EDFA] brutal-border flex items-center justify-center brutal-shadow-sm">
+<span class="material-symbols-outlined text-[#0E4A6E] text-2xl font-black">dashboard_customize</span>
+</div>
+<div>
+<h2 class="font-heading text-xl text-[#0B2E4B] font-black">
+              Satu rumah banyak tools
+            </h2>
+<p class="text-base text-[#4E7390] mt-2 leading-relaxed">
+              Satu deployment terpadu, puluhan rute terintegrasi tanpa perlu berpindah-pindah platform atau membuka banyak tab terpisah.
+            </p>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t-2 border-[#000000]/10 flex items-center justify-between">
+<span class="text-xs uppercase font-bold text-[#4E7390]">Terpadu &amp; Sentral</span>
+<span class="material-symbols-outlined text-[#0B2E4B]">arrow_forward</span>
+</div>
+</div>
+<!-- Card 2: Cepat & Sederhana -->
+<div class="bg-[#FFFFFF] rounded-2xl p-6 brutal-border brutal-shadow flex flex-col justify-between relative overflow-hidden group hover:-translate-y-1 transition-transform">
+<div class="absolute -right-3 -top-3 w-16 h-16 bg-[#D9EDFA] rounded-full brutal-border-2 -z-0 opacity-80 group-hover:scale-110 transition-transform"></div>
+<div class="relative z-10 space-y-4">
+<div class="w-12 h-12 rounded-xl bg-[#0E4A6E] brutal-border flex items-center justify-center brutal-shadow-sm">
+<span class="material-symbols-outlined text-[#FFFFFF] text-2xl font-black">bolt</span>
+</div>
+<div>
+<h2 class="font-heading text-xl text-[#0B2E4B] font-black">
+              Cepat dan sederhana
+            </h2>
+<p class="text-base text-[#4E7390] mt-2 leading-relaxed">
+              Client-side calculators untuk respons instan 0ms, pemuatan lazy loading untuk perkakas komputasi berat tanpa latensi jaringan.
+            </p>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t-2 border-[#000000]/10 flex items-center justify-between">
+<span class="text-xs uppercase font-bold text-[#0E4A6E]">0ms Response Client</span>
+<span class="material-symbols-outlined text-[#0B2E4B]">speed</span>
+</div>
+</div>
+<!-- Card 3: Privasi Dulu -->
+<div class="bg-[#FFFFFF] rounded-2xl p-6 brutal-border brutal-shadow flex flex-col justify-between relative overflow-hidden group hover:-translate-y-1 transition-transform">
+<div class="absolute -right-3 -top-3 w-16 h-16 bg-[#D9EDFA] rounded-full brutal-border-2 -z-0 opacity-80 group-hover:scale-110 transition-transform"></div>
+<div class="relative z-10 space-y-4">
+<div class="w-12 h-12 rounded-xl bg-[#D9EDFA] brutal-border flex items-center justify-center brutal-shadow-sm">
+<span class="material-symbols-outlined text-[#0E4A6E] text-2xl font-black">lock</span>
+</div>
+<div>
+<h2 class="font-heading text-xl text-[#0B2E4B] font-black">
+              Privasi dulu
+            </h2>
+<p class="text-base text-[#4E7390] mt-2 leading-relaxed">
+              Dokumen tidak disimpan ke basis data secara default, pengolahan API key aman di server, dan enkripsi HTTPS penuh untuk ketenangan pikiran.
+            </p>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t-2 border-[#000000]/10 flex items-center justify-between">
+<span class="text-xs uppercase font-bold text-[#4E7390]">No Data Retention</span>
+<span class="material-symbols-outlined text-[#0B2E4B]">verified_user</span>
+</div>
+</div>
+</section>
+<!-- SECTION 3: TOOLS PHASE 1 LIST -->
+<section class="space-y-6">
+<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b-4 border-[#000000] pb-3">
+<div>
+<span class="text-xs uppercase text-[#4E7390] font-bold tracking-wider">Arsitektur Produksi Aktif</span>
+<h2 class="font-heading text-2xl sm:text-3xl text-[#0B2E4B] font-black">
+            Koleksi Alat Fase 1 (Rilis Aktif)
+          </h2>
+</div>
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFD02B] text-[#000000] text-xs brutal-border-2 font-black">
+          4 Alat Siap Pakai
+        </span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Tool 1: AI Detector -->
+<article class="bg-[#FFFFFF] rounded-2xl p-5 brutal-border brutal-shadow flex flex-col justify-between gap-4 hover:bg-[#D9EDFA]/40 transition-colors">
+<div class="space-y-3">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-[#0E4A6E] text-[#FFFFFF] brutal-border-2 flex items-center justify-center font-bold">
+<span class="material-symbols-outlined text-xl">psychology</span>
+</div>
+<div>
+<h3 class="font-heading text-xl text-[#0B2E4B] font-black leading-tight">AI Detector</h3>
+<span class="text-xs text-[#4E7390] uppercase font-bold">Analisis Sintaksis &amp; Probabilitas</span>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-[#D93A2B] text-[#FFFFFF] text-xs font-bold uppercase brutal-border-2">
+                External
+              </span>
+</div>
+<p class="text-sm text-[#4E7390] leading-relaxed">
+              Analisis struktur teks esai dan estimasi probabilitas konten yang dihasilkan oleh model generator AI populer untuk integritas akademis.
+            </p>
+</div>
+<div class="pt-3 border-t-2 border-[#000000]/10 flex items-center justify-between">
+<span class="text-xs text-[#4E7390] font-bold">Tersambung Langsung ⧉</span>
+<button class="h-10 px-4 rounded-xl bg-[#FFFFFF] brutal-border-2 brutal-shadow-sm brutal-press text-xs font-bold text-[#0B2E4B] hover:bg-[#D9EDFA] flex items-center gap-1" type="button">
+              Buka <span class="material-symbols-outlined text-sm">open_in_new</span>
+</button>
+</div>
+</article>
+<!-- Tool 2: Citation Generator -->
+<article class="bg-[#FFFFFF] rounded-2xl p-5 brutal-border brutal-shadow flex flex-col justify-between gap-4 hover:bg-[#D9EDFA]/40 transition-colors">
+<div class="space-y-3">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-[#0E4A6E] text-[#FFFFFF] brutal-border-2 flex items-center justify-center font-bold">
+<span class="material-symbols-outlined text-xl">format_quote</span>
+</div>
+<div>
+<h3 class="font-heading text-xl text-[#0B2E4B] font-black leading-tight">Citation Generator</h3>
+<span class="text-xs text-[#4E7390] uppercase font-bold">Standar Referensi Global</span>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-[#D9EDFA] text-[#0B2E4B] text-xs font-bold uppercase brutal-border-2">
+                Tersedia
+              </span>
+</div>
+<p class="text-sm text-[#4E7390] leading-relaxed">
+              Susun daftar pustaka dan sitasi dalam teks secara instan sesuai format APA 7th, MLA 9th, Chicago, hingga IEEE tanpa galat koma.
+            </p>
+</div>
+<div class="pt-3 border-t-2 border-[#000000]/10 flex items-center justify-between">
+<span class="text-xs text-[#0E4A6E] font-bold">APA • MLA • IEEE</span>
+<button class="h-10 px-4 rounded-xl bg-[#0E4A6E] brutal-border-2 brutal-shadow-sm brutal-press text-xs font-bold text-[#FFFFFF] hover:bg-[#0B2E4B] flex items-center gap-1" type="button">
+              Gunakan Alat <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</article>
+<!-- Tool 3: GPA Calculator -->
+<article class="bg-[#FFFFFF] rounded-2xl p-5 brutal-border brutal-shadow flex flex-col justify-between gap-4 hover:bg-[#D9EDFA]/40 transition-colors">
+<div class="space-y-3">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-[#0E4A6E] text-[#FFFFFF] brutal-border-2 flex items-center justify-center font-bold">
+<span class="material-symbols-outlined text-xl">calculate</span>
+</div>
+<div>
+<h3 class="font-heading text-xl text-[#0B2E4B] font-black leading-tight">GPA Calculator</h3>
+<span class="text-xs text-[#4E7390] uppercase font-bold">Kalkulasi Indeks Prestasi</span>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-[#D9EDFA] text-[#0B2E4B] text-xs font-bold uppercase brutal-border-2">
+                Tersedia
+              </span>
+</div>
+<p class="text-sm text-[#4E7390] leading-relaxed">
+              Hitung IPK kumulatif, simulasikan perolehan nilai semester depan, dan proyeksikan syarat minimal kelulusan dengan bobot SKS adaptif.
+            </p>
+</div>
+<div class="pt-3 border-t-2 border-[#000000]/10 flex items-center justify-between">
+<span class="text-xs text-[#0E4A6E] font-bold">Target Semester</span>
+<button class="h-10 px-4 rounded-xl bg-[#0E4A6E] brutal-border-2 brutal-shadow-sm brutal-press text-xs font-bold text-[#FFFFFF] hover:bg-[#0B2E4B] flex items-center gap-1" type="button">
+              Gunakan Alat <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</article>
+<!-- Tool 4: Grade Calculator -->
+<article class="bg-[#FFFFFF] rounded-2xl p-5 brutal-border brutal-shadow flex flex-col justify-between gap-4 hover:bg-[#D9EDFA]/40 transition-colors">
+<div class="space-y-3">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-[#0E4A6E] text-[#FFFFFF] brutal-border-2 flex items-center justify-center font-bold">
+<span class="material-symbols-outlined text-xl">assignment_turned_in</span>
+</div>
+<div>
+<h3 class="font-heading text-xl text-[#0B2E4B] font-black leading-tight">Grade Calculator</h3>
+<span class="text-xs text-[#4E7390] uppercase font-bold">Proporsi &amp; Bobot Evaluasi</span>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-[#D9EDFA] text-[#0B2E4B] text-xs font-bold uppercase brutal-border-2">
+                Tersedia
+              </span>
+</div>
+<p class="text-sm text-[#4E7390] leading-relaxed">
+              Kalkulasi bobot tugas, kuis, UTS, dan UAS. Ketahui skor minimal ujian akhir yang harus dicapai untuk mengamankan huruf mutu A.
+            </p>
+</div>
+<div class="pt-3 border-t-2 border-[#000000]/10 flex items-center justify-between">
+<span class="text-xs text-[#0E4A6E] font-bold">Bobot Ujian</span>
+<button class="h-10 px-4 rounded-xl bg-[#0E4A6E] brutal-border-2 brutal-shadow-sm brutal-press text-xs font-bold text-[#FFFFFF] hover:bg-[#0B2E4B] flex items-center gap-1" type="button">
+              Gunakan Alat <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</article>
+</div>
+</section>
+<!-- SECTION 4: TECH STRIP -->
+<section class="bg-[#FFFFFF] rounded-2xl p-6 brutal-border brutal-shadow space-y-5">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+<div>
+<span class="text-xs uppercase text-[#4E7390] font-bold">Modern Engineering Stack</span>
+<h2 class="font-heading text-2xl text-[#0B2E4B] font-black">
+            Teknologi di Balik Academic Hub
+          </h2>
+</div>
+<span class="text-xs font-bold px-3 py-1 bg-[#D9EDFA] text-[#0B2E4B] rounded-full brutal-border-2">
+          High Performance • Monorepo
+        </span>
+</div>
+<!-- Badge Strip -->
+<div class="flex flex-wrap gap-2.5 pt-1">
+<div class="h-10 px-3.5 rounded-xl bg-[#D9EDFA] brutal-border-2 brutal-shadow-sm flex items-center gap-2 text-xs font-bold text-[#0B2E4B]">
+<span class="w-3 h-3 rounded-full bg-[#0E4A6E] inline-block"></span> Next.js 14
+        </div>
+<div class="h-10 px-3.5 rounded-xl bg-[#D9EDFA] brutal-border-2 brutal-shadow-sm flex items-center gap-2 text-xs font-bold text-[#0B2E4B]">
+<span class="w-3 h-3 rounded-full bg-[#0E4A6E] inline-block"></span> TypeScript
+        </div>
+<div class="h-10 px-3.5 rounded-xl bg-[#D9EDFA] brutal-border-2 brutal-shadow-sm flex items-center gap-2 text-xs font-bold text-[#0B2E4B]">
+<span class="w-3 h-3 rounded-full bg-[#0E4A6E] inline-block"></span> Tailwind CSS
+        </div>
+<div class="h-10 px-3.5 rounded-xl bg-[#D9EDFA] brutal-border-2 brutal-shadow-sm flex items-center gap-2 text-xs font-bold text-[#0B2E4B]">
+<span class="w-3 h-3 rounded-full bg-[#0E4A6E] inline-block"></span> Turborepo
+        </div>
+<div class="h-10 px-3.5 rounded-xl bg-[#D9EDFA] brutal-border-2 brutal-shadow-sm flex items-center gap-2 text-xs font-bold text-[#0B2E4B]">
+<span class="w-3 h-3 rounded-full bg-[#0E4A6E] inline-block"></span> pnpm
+        </div>
+<div class="h-10 px-3.5 rounded-xl bg-[#D9EDFA] brutal-border-2 brutal-shadow-sm flex items-center gap-2 text-xs font-bold text-[#0B2E4B]">
+<span class="w-3 h-3 rounded-full bg-[#0E4A6E] inline-block"></span> Vercel Edge
+        </div>
+</div>
+<div class="p-4 bg-[#D9EDFA] rounded-xl brutal-border-2 text-sm text-[#4E7390] flex items-start gap-3">
+<span class="material-symbols-outlined text-[#0E4A6E] text-xl mt-0.5">verified</span>
+<p class="leading-relaxed">
+          Dibangun dengan struktur monorepo teroptimasi. Modul dipisahkan secara independen untuk memastikan waktu muat super cepat, isolasi keamanan tipe end-to-end, dan pembaruan berkala tanpa downtime.
+        </p>
+</div>
+</section>
+<!-- SECTION 5: ROADMAP TEASER -->
+<section class="space-y-6">
+<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b-4 border-[#000000] pb-3">
+<div>
+<span class="text-xs uppercase text-[#4E7390] font-bold tracking-wider">Laboratorium Pengembangan</span>
+<h2 class="font-heading text-2xl sm:text-3xl text-[#0B2E4B] font-black">
+            Segera Hadir di Rilis Berikutnya
+          </h2>
+</div>
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D9EDFA] text-[#0B2E4B] text-xs brutal-border-2 font-black">
+          Rilis Q2/Q3 2025
+        </span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Coming 1: PDF Tools -->
+<div class="bg-[#FFFFFF] rounded-2xl p-5 brutal-border brutal-shadow-sm flex flex-col justify-between gap-4 border-dashed">
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<span class="material-symbols-outlined text-2xl text-[#0E4A6E]">picture_as_pdf</span>
+<span class="px-2 py-0.5 rounded-md bg-[#D9EDFA] text-[#0B2E4B] text-xs uppercase font-bold brutal-border-2">
+                Coming Soon
+              </span>
+</div>
+<h3 class="font-heading text-xl text-[#0B2E4B] font-bold">PDF Tools</h3>
+<p class="text-sm text-[#4E7390]">
+              Kompresi dokumen berukuran besar, ekstraksi tabel teks, dan pemisahan bab file skripsi secara lokal.
+            </p>
+</div>
+<span class="text-xs text-[#4E7390] font-bold uppercase tracking-wider">Fase Pra-Rilis</span>
+</div>
+<!-- Coming 2: Study Planner -->
+<div class="bg-[#FFFFFF] rounded-2xl p-5 brutal-border brutal-shadow-sm flex flex-col justify-between gap-4 border-dashed">
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<span class="material-symbols-outlined text-2xl text-[#0E4A6E]">calendar_month</span>
+<span class="px-2 py-0.5 rounded-md bg-[#D9EDFA] text-[#0B2E4B] text-xs uppercase font-bold brutal-border-2">
+                Coming Soon
+              </span>
+</div>
+<h3 class="font-heading text-xl text-[#0B2E4B] font-bold">Study Planner</h3>
+<p class="text-sm text-[#4E7390]">
+              Manajemen jadwal kuliah adaptif, deadline tugas otomatis, dan kalender ujian terintegrasi.
+            </p>
+</div>
+<span class="text-xs text-[#4E7390] font-bold uppercase tracking-wider">Fase Pra-Rilis</span>
+</div>
+<!-- Coming 3: Quiz & Flashcard -->
+<div class="bg-[#FFFFFF] rounded-2xl p-5 brutal-border brutal-shadow-sm flex flex-col justify-between gap-4 border-dashed">
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<span class="material-symbols-outlined text-2xl text-[#0E4A6E]">style</span>
+<span class="px-2 py-0.5 rounded-md bg-[#D9EDFA] text-[#0B2E4B] text-xs uppercase font-bold brutal-border-2">
+                Coming Soon
+              </span>
+</div>
+<h3 class="font-heading text-xl text-[#0B2E4B] font-bold">Quiz &amp; Flashcard</h3>
+<p class="text-sm text-[#4E7390]">
+              Latihan soal interaktif bab kuliah dengan metode Spaced Repetition untuk retensi memori jangka panjang.
+            </p>
+</div>
+<span class="text-xs text-[#4E7390] font-bold uppercase tracking-wider">Fase Konsep</span>
+</div>
+<!-- Coming 4: Thesis Checker -->
+<div class="bg-[#FFFFFF] rounded-2xl p-5 brutal-border brutal-shadow-sm flex flex-col justify-between gap-4 border-dashed">
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<span class="material-symbols-outlined text-2xl text-[#0E4A6E]">fact_check</span>
+<span class="px-2 py-0.5 rounded-md bg-[#D9EDFA] text-[#0B2E4B] text-xs uppercase font-bold brutal-border-2">
+                Coming Soon
+              </span>
+</div>
+<h3 class="font-heading text-xl text-[#0B2E4B] font-bold">Thesis Checker</h3>
+<p class="text-sm text-[#4E7390]">
+              Pemeriksa kelengkapan format naskah skripsi, margin panduan kampus, dan konsistensi penomoran bab.
+            </p>
+</div>
+<span class="text-xs text-[#4E7390] font-bold uppercase tracking-wider">Fase Konsep</span>
+</div>
+</div>
+</section>
+<!-- SECTION 6: KONTAK & ACTION STRIP -->
+<section class="bg-[#D9EDFA] rounded-2xl p-6 sm:p-8 brutal-border brutal-shadow text-[#0B2E4B] space-y-6">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="space-y-2 max-w-xl">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-[#FFD02B] text-[#000000] rounded-full brutal-border-2 text-xs uppercase font-black">
+            Hubungi Tim Pengembang
+          </div>
+<h2 class="font-heading text-2xl sm:text-3xl text-[#0B2E4B] font-black">
+            Punya ide alat akademik baru?
+          </h2>
+<p class="text-base text-[#4E7390] leading-relaxed">
+            Academic Hub terus berkembang berkat masukan dari rekan mahasiswa, dosen, dan peneliti independen. Kirimkan saran atau laporkan bug melalui kanal terbuka kami.
+          </p>
+</div>
+<!-- Contact Links -->
+<div class="flex flex-col gap-3 min-w-[240px]">
+<a class="h-12 px-5 rounded-full bg-[#0E4A6E] text-[#FFFFFF] brutal-border brutal-shadow brutal-press text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#0B2E4B] transition-colors" href="mailto:halo@academichub.id">
+<span class="material-symbols-outlined text-xl">mail</span>
+            halo@academichub.id
+          </a>
+<a class="h-12 px-5 rounded-full bg-[#FFFFFF] text-[#0B2E4B] brutal-border brutal-shadow brutal-press text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#EAF5FC] transition-colors" href="#github">
+<span class="material-symbols-outlined text-xl">code</span>
+            github/academichub
+          </a>
+</div>
+</div>
+<div class="pt-6 border-t-2 border-[#000000]/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+<p class="text-sm text-[#4E7390] text-center sm:text-left">
+          Built with <span class="text-[#D93A2B] font-black">❤️</span> for students, researchers, and educators across Indonesia.
+        </p>
+<div class="flex items-center gap-4">
+<a class="text-xs text-[#0E4A6E] hover:text-[#0B2E4B] underline font-bold" href="#privacy">
+            Kebijakan Privasi (Privacy Policy)
+          </a>
+<a class="text-xs text-[#0E4A6E] hover:text-[#0B2E4B] underline font-bold" href="#terms">
+            Ketentuan Layanan
+          </a>
+</div>
+</div>
+</section>
+<!-- NAVIGATION RETURN STRIP -->
+<div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 pb-6">
+<a class="w-full sm:w-auto h-12 px-6 rounded-full bg-[#0E4A6E] text-[#FFFFFF] brutal-border brutal-shadow brutal-press text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#0B2E4B] transition-colors" href="#tools">
+<span class="material-symbols-outlined text-lg">apps</span>
+        Eksplorasi Direktori Alat
+      </a>
+<a class="w-full sm:w-auto h-12 px-6 rounded-full bg-[#FFFFFF] text-[#0B2E4B] brutal-border brutal-shadow brutal-press text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#D9EDFA] transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">home</span>
+        Kembali ke Beranda
+      </a>
+</div>
+</div>
+</div></main>
+<!-- END: MainContent -->
+<!-- BEGIN: MainFooter -->
+<footer class="mt-12 bg-[#FFFFFF] border-t-[3px] border-[#000000] py-8 px-4 sm:px-6">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+<!-- Logo & Copyright -->
+<div class="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
+<div class="w-8 h-8 rounded-lg bg-[#FFD02B] brutal-border flex items-center justify-center font-bold text-sm shadow-[2px_2px_0px_#000000] text-[#000000]">
+          AH
+        </div>
+<div>
+<span class="font-heading font-extrabold text-base text-[#0B2E4B] block">
+            Academic Hub
+          </span>
+<p class="text-xs font-semibold text-[#4E7390]">
+            © 2025 Akademika Neo-Comic Suite. Designed for high student utility.
+          </p>
+</div>
+</div>
+<!-- Footer Quick Links -->
+<nav aria-label="Footer Links" class="flex items-center flex-wrap justify-center gap-4 text-xs font-bold uppercase tracking-wider text-[#0B2E4B]">
+<a class="hover:text-[#0E4A6E] underline decoration-2 underline-offset-2" href="#terms">Terms</a>
+<a class="hover:text-[#0E4A6E] underline decoration-2 underline-offset-2" href="#privacy">Privacy</a>
+<a class="hover:text-[#0E4A6E] underline decoration-2 underline-offset-2" href="#api">API</a>
+<a class="hover:text-[#0E4A6E] underline decoration-2 underline-offset-2" href="#feedback">Feedback</a>
+<a class="px-2.5 py-1 rounded bg-[#0E4A6E] text-[#FFFFFF] brutal-border-2 shadow-[2px_2px_0px_#000000] hover:bg-[#0B2E4B]" href="#university">
+          University Network
+        </a>
+</nav>
+</div>
+</footer>
+<!-- END: MainFooter -->
+</body></html>

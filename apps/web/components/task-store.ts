@@ -1,10 +1,18 @@
 "use client";
 
-// Satu sumber data task lintas halaman (roadmap ↔ jadwal ↔ planner).
+// Satu sumber data task lintas halaman (roadmap ↔ jadwal ↔ planner ↔ materi).
 // Semua yang butuh task ambil dari sini; key lama tidak dihapus (backup).
-export type TaskSource = "roadmap" | "jadwal" | "planner" | "materi";
+// Tahap 1 — fondasi data: CRUD bersama, ID stabil, subtugas, arsip,
+// riwayat undo (sesi ini), migration aman, dan backup JSON.
+export type TaskSource = "roadmap" | "jadwal" | "planner" | "materi" | "pribadi";
 export type TaskStatusT = "todo" | "doing" | "done";
 export type PrioritasT = "tinggi" | "sedang" | "rendah" | "normal";
+
+export interface SubTask {
+  id: string;
+  title: string;
+  done: boolean;
+}
 
 export interface SharedTask {
   id: string;
@@ -13,28 +21,55 @@ export interface SharedTask {
   prioritas: PrioritasT;
   title: string;
   description?: string;
+  /** ISO (yyyy-mm-dd) atau teks bebas — disimpan apa adanya, jangan dikarang. */
   dueDate?: string;
+  jam?: string;
   phaseId?: string;
+  phaseTitle?: string;
   roadmapStepId?: string;
   tag?: string;
-  jam?: string;
   ruang?: string;
   durasi?: number;
   progres?: number;
+  /** jumlah catatan (angka) — metadata ringkas */
   catatan?: number;
+  /** catatan bebas milik pengguna */
+  notes?: string;
+  subtasks?: SubTask[];
+  /** arsip: disembunyikan dari papan, tidak dihitung di progres */
+  arsip?: boolean;
   createdAt: string;
   completedAt?: string;
 }
 
 const STORE_KEY = "cademy:tasks-v1";
+export const BACKUP_MAGIC = "cademy-tasks-backup";
+export const BACKUP_VERSION = 1;
+
 const LEGACY = {
   flowchart: "cademy:flowchart",
   planner: "cademy:planner",
   jadwalTugas: "cademy:jadwal-tugas",
 };
 
-const uid = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+const STATUS_VALID: TaskStatusT[] = ["todo", "doing", "done"];
+const PRIORITAS_VALID: PrioritasT[] = ["tinggi", "sedang", "rendah", "normal"];
+const SOURCE_VALID: TaskSource[] = [
+  "roadmap",
+  "jadwal",
+  "planner",
+  "materi",
+  "pribadi",
+];
+
+/** ID stabil: prefiks sumber + waktu + acak (bukan judul tugas). */
+export function uid(prefix = "t"): string {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+}
+
+const newId = (source: TaskSource): string => uid(source);
 
 function read<T>(key: string): T | null {
   try {
@@ -46,17 +81,106 @@ function read<T>(key: string): T | null {
   }
 }
 
+function write(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* penyimpanan penuh / mode privat — abaikan, jangan crash */
+  }
+}
+
+function asStr(v: unknown, fallback = ""): string {
+  return typeof v === "string" ? v : fallback;
+}
+
+function asNum(v: unknown, fallback: number): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : fallback;
+}
+
+/**
+ * Normalisasi 1 record dari mana saja (store / migrasi / impor JSON).
+ * Field wajib yang tidak valid dibuat default; record tanpa judul ditolak
+ * supaya data rusak tidak masuk ke papan.
+ */
+export function normalizeTask(raw: unknown): SharedTask | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  const title = asStr(r["title"]).trim();
+  if (!title) return null;
+  const source = SOURCE_VALID.includes(r["source"] as TaskSource)
+    ? (r["source"] as TaskSource)
+    : "pribadi";
+  const status = STATUS_VALID.includes(r["status"] as TaskStatusT)
+    ? (r["status"] as TaskStatusT)
+    : "todo";
+  const prioritas = PRIORITAS_VALID.includes(r["prioritas"] as PrioritasT)
+    ? (r["prioritas"] as PrioritasT)
+    : "sedang";
+  const subtasksRaw = Array.isArray(r["subtasks"]) ? r["subtasks"] : [];
+  const subtasks: SubTask[] = subtasksRaw
+    .map((s) => {
+      if (typeof s !== "object" || s === null) return null;
+      const o = s as Record<string, unknown>;
+      const t = asStr(o["title"]).trim();
+      if (!t) return null;
+      return {
+        id: asStr(o["id"]) || uid("sub"),
+        title: t,
+        done: o["done"] === true,
+      };
+    })
+    .filter((s): s is SubTask => s !== null);
+  const createdAt = asStr(r["createdAt"]) || new Date().toISOString();
+  const task: SharedTask = {
+    id: asStr(r["id"]) || newId(source),
+    source,
+    status,
+    prioritas,
+    title,
+    createdAt,
+  };
+  if (asStr(r["description"])) task.description = asStr(r["description"]);
+  if (asStr(r["dueDate"])) task.dueDate = asStr(r["dueDate"]);
+  if (asStr(r["jam"])) task.jam = asStr(r["jam"]);
+  if (asStr(r["phaseId"])) task.phaseId = asStr(r["phaseId"]);
+  if (asStr(r["phaseTitle"])) task.phaseTitle = asStr(r["phaseTitle"]);
+  if (asStr(r["roadmapStepId"]))
+    task.roadmapStepId = asStr(r["roadmapStepId"]);
+  if (asStr(r["tag"])) task.tag = asStr(r["tag"]);
+  if (asStr(r["ruang"])) task.ruang = asStr(r["ruang"]);
+  if (r["durasi"] !== undefined) task.durasi = asNum(r["durasi"], 60);
+  if (r["progres"] !== undefined)
+    task.progres = Math.min(100, Math.max(0, Math.round(asNum(r["progres"], 0))));
+  if (r["catatan"] !== undefined) task.catatan = asNum(r["catatan"], 0);
+  if (asStr(r["notes"])) task.notes = asStr(r["notes"]);
+  if (subtasks.length > 0) task.subtasks = subtasks;
+  if (r["arsip"] === true) task.arsip = true;
+  if (asStr(r["completedAt"])) task.completedAt = asStr(r["completedAt"]);
+  return task;
+}
+
+function normalizeList(raw: unknown): SharedTask[] {
+  if (!Array.isArray(raw)) return [];
+  const out: SharedTask[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    const t = normalizeTask(item);
+    if (!t) continue;
+    if (seen.has(t.id)) continue; // dedupe by ID stabil
+    seen.add(t.id);
+    out.push(t);
+  }
+  return out;
+}
+
 // Migrasi sekali jalan dari key lama ke store baru. Key lama tetap disimpan.
 function migrate(): SharedTask[] {
   const out: SharedTask[] = [];
 
-  const flow = read<{
-    steps?: Record<string, boolean>;
-  }>(LEGACY.flowchart);
-  if (flow && flow.steps) {
-    // Dibangun ulang oleh flowchart view; di sini hanya sinyal bahwa data ada.
-    // Step roadmap direkonstruksi saat flowchart pertama load melalui upsertRoadmap,
-    // jadi yang penting statusnya tersimpan di store lewat path itu.
+  const flow = read<Record<string, unknown>>(LEGACY.flowchart);
+  if (flow && typeof flow === "object") {
+    // Step roadmap direkonstruksi oleh flowchart view; di sini data lama
+    // hanya menjadi sumber awal, bukan sumber kebenaran status.
   }
 
   const plannerTasks = read<Array<Record<string, unknown>>>(LEGACY.planner);
@@ -68,75 +192,280 @@ function migrate(): SharedTask[] {
           : t["selesai"] === true
             ? "done"
             : "todo";
-      out.push({
-        id: typeof t["id"] === "string" ? t["id"] : uid(),
-        source: "planner",
-        status,
-        prioritas:
-          t["prioritas"] === "tinggi" || t["prioritas"] === "rendah"
-            ? (t["prioritas"] as PrioritasT)
-            : "sedang",
-        title: typeof t["nama"] === "string" ? t["nama"] : "Tanpa judul",
-        description: typeof t["deskripsi"] === "string" ? t["deskripsi"] : "",
-        dueDate: typeof t["deadline"] === "string" ? t["deadline"] : "",
-        jam: typeof t["jam"] === "string" ? t["jam"] : "",
-        ruang: typeof t["ruang"] === "string" ? t["ruang"] : "",
-        durasi: typeof t["durasi"] === "number" ? t["durasi"] : 60,
-        createdAt: new Date().toISOString(),
-      });
+      out.push(
+        normalizeTask({
+          ...t,
+          id: typeof t["id"] === "string" ? t["id"] : newId("planner"),
+          source: "planner",
+          status,
+          title: typeof t["nama"] === "string" ? t["nama"] : "",
+          description: typeof t["deskripsi"] === "string" ? t["deskripsi"] : "",
+        }) as SharedTask
+      );
     }
   }
 
   const jadwalTasks = read<Array<Record<string, unknown>>>(LEGACY.jadwalTugas);
   if (Array.isArray(jadwalTasks)) {
     for (const t of jadwalTasks) {
-      out.push({
-        id: typeof t["id"] === "string" ? t["id"] : uid(),
-        source: "jadwal",
-        status:
-          t["status"] === "doing" || t["status"] === "done"
-            ? (t["status"] as TaskStatusT)
-            : "todo",
-        prioritas:
-          t["prioritas"] === "tinggi" || t["prioritas"] === "rendah"
-            ? (t["prioritas"] as PrioritasT)
-            : t["prioritas"] === "normal"
-              ? "normal"
-              : "sedang",
-        title: typeof t["judul"] === "string" ? t["judul"] : "Tanpa judul",
-        description: "",
-        dueDate: typeof t["deadline"] === "string" ? t["deadline"] : "",
-        tag: typeof t["tag"] === "string" ? t["tag"] : "",
-        progres: typeof t["progres"] === "number" ? t["progres"] : 0,
-        catatan: typeof t["catatan"] === "number" ? t["catatan"] : 0,
-        createdAt: new Date().toISOString(),
-      });
+      out.push(
+        normalizeTask({
+          ...t,
+          id: typeof t["id"] === "string" ? t["id"] : newId("jadwal"),
+          source: "jadwal",
+          title: typeof t["judul"] === "string" ? t["judul"] : "",
+        }) as SharedTask
+      );
     }
   }
 
-  return out;
+  return normalizeList(out);
 }
 
+/** Semua task (termasuk arsip). Data rusak dibuang per-record, bukan semua. */
 export function loadTasks(): SharedTask[] {
   const raw = read<unknown>(STORE_KEY);
-  if (Array.isArray(raw)) return raw as SharedTask[];
-  // pertama kali: migrasi dari key lama
-  const migrated = migrate();
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(migrated));
-  } catch {
-    /* abaikan */
+  if (Array.isArray(raw)) return normalizeList(raw);
+  if (raw === null) {
+    const migrated = migrate();
+    write(STORE_KEY, migrated);
+    return migrated;
   }
-  return migrated;
+  // data rusak total: jangan crash, mulai dari daftar kosong
+  return [];
 }
 
 export function saveTasks(tasks: SharedTask[]): void {
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(tasks));
-  } catch {
-    /* abaikan */
-  }
+  write(STORE_KEY, normalizeList(tasks));
 }
 
 export const bySource = (tasks: SharedTask[], src: TaskSource) =>
   tasks.filter((t) => t.source === src);
+
+/** Tugas aktif = tidak diarsipkan. */
+export const tugasAktif = (tasks: SharedTask[]) =>
+  tasks.filter((t) => !t.arsip);
+
+/** Progres 1 tugas: subtask kalau ada (aturan konsisten), else status/progres. */
+export function taskProgress(task: SharedTask): number {
+  if (task.subtasks && task.subtasks.length > 0) {
+    const done = task.subtasks.filter((s) => s.done).length;
+    return Math.round((done / task.subtasks.length) * 100);
+  }
+  if (task.status === "done") return 100;
+  if (task.status === "doing") return task.progres ?? 50;
+  return 0;
+}
+
+/** Ringkasan progres dari data aktual; aman saat belum ada tugas. */
+export function hitungProgres(tasks: SharedTask[]): {
+  selesai: number;
+  total: number;
+  pct: number;
+} {
+  const aktif = tugasAktif(tasks);
+  const selesai = aktif.filter((t) => t.status === "done").length;
+  return {
+    selesai,
+    total: aktif.length,
+    pct: aktif.length === 0 ? 0 : Math.round((selesai / aktif.length) * 100),
+  };
+}
+
+/** CRUD bersama — satu implementasi untuk semua halaman. */
+export function createTask(
+  input: Partial<SharedTask> & { source: TaskSource; title: string }
+): SharedTask {
+  const sekarang = new Date().toISOString();
+  const status: TaskStatusT = input.status ?? "todo";
+  return {
+    ...input,
+    id: input.id ?? newId(input.source),
+    source: input.source,
+    title: input.title.trim(),
+    prioritas: input.prioritas ?? "sedang",
+    status,
+    createdAt: input.createdAt ?? sekarang,
+    ...(status === "done" ? { completedAt: input.completedAt ?? sekarang } : {}),
+  };
+}
+
+export function updateTask(
+  tasks: SharedTask[],
+  id: string,
+  patch: Partial<SharedTask>
+): SharedTask[] {
+  return tasks.map((t) => (t.id === id ? { ...t, ...patch, id: t.id } : t));
+}
+
+export function setTaskStatus(
+  tasks: SharedTask[],
+  id: string,
+  status: TaskStatusT
+): SharedTask[] {
+  return tasks.map((t) =>
+    t.id === id
+      ? {
+          ...t,
+          status,
+          progres:
+            status === "done" ? 100 : status === "todo" ? 0 : t.progres ?? 50,
+          completedAt:
+            status === "done"
+              ? (t.completedAt ?? new Date().toISOString())
+              : undefined,
+        }
+      : t
+  );
+}
+
+export function removeTask(tasks: SharedTask[], id: string): SharedTask[] {
+  return tasks.filter((t) => t.id !== id);
+}
+
+export function arsipkanTugas(
+  tasks: SharedTask[],
+  id: string,
+  arsip = true
+): SharedTask[] {
+  return updateTask(tasks, id, { arsip });
+}
+
+export function toggleSubtask(
+  tasks: SharedTask[],
+  taskId: string,
+  subId: string
+): SharedTask[] {
+  return tasks.map((t) =>
+    t.id === taskId && t.subtasks
+      ? {
+          ...t,
+          subtasks: t.subtasks.map((s) =>
+            s.id === subId ? { ...s, done: !s.done } : s
+          ),
+        }
+      : t
+  );
+}
+
+export function tambahSubtask(
+  tasks: SharedTask[],
+  taskId: string,
+  title: string
+): SharedTask[] {
+  const judul = title.trim();
+  if (!judul) return tasks;
+  return tasks.map((t) =>
+    t.id === taskId
+      ? {
+          ...t,
+          subtasks: [
+            ...(t.subtasks ?? []),
+            { id: uid("sub"), title: judul, done: false },
+          ],
+        }
+      : t
+  );
+}
+
+export function hapusSubtask(
+  tasks: SharedTask[],
+  taskId: string,
+  subId: string
+): SharedTask[] {
+  return tasks.map((t) =>
+    t.id === taskId && t.subtasks
+      ? { ...t, subtasks: t.subtasks.filter((s) => s.id !== subId) }
+      : t
+  );
+}
+
+// ── Riwayat undo (sesi ini, di memori — jangan diklaim permanen) ─────────────
+const RIWAYAT_MAX = 20;
+const riwayat: { label: string; tasks: SharedTask[] }[] = [];
+
+export function pushRiwayat(label: string, tasks: SharedTask[]): void {
+  riwayat.push({ label, tasks: tasks.map((t) => ({ ...t })) });
+  if (riwayat.length > RIWAYAT_MAX) riwayat.shift();
+}
+
+export function bisaUndo(): boolean {
+  return riwayat.length > 0;
+}
+
+export function labelUndo(): string | null {
+  return riwayat.length > 0 ? riwayat[riwayat.length - 1].label : null;
+}
+
+export function undoTask(): SharedTask[] | null {
+  const item = riwayat.pop();
+  return item ? item.tasks : null;
+}
+
+// ── Backup ekspor / impor JSON ──────────────────────────────────────────────
+export function buatCadangan(
+  tasks: SharedTask[]
+): { app: string; version: number; exportedAt: string; total: number; tasks: SharedTask[] } {
+  return {
+    app: BACKUP_MAGIC,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    total: tasks.length,
+    tasks,
+  };
+}
+
+export type HasilBacaCadangan =
+  | { ok: true; tasks: SharedTask[]; total: number }
+  | { ok: false; error: string };
+
+export function bacaCadangan(json: string): HasilBacaCadangan {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return { ok: false, error: "File bukan JSON yang valid." };
+  }
+  if (typeof parsed !== "object" || parsed === null) {
+    return { ok: false, error: "Isi file bukan objek data." };
+  }
+  const obj = parsed as Record<string, unknown>;
+  const isBackupCademy = obj["app"] === BACKUP_MAGIC || Array.isArray(obj["tasks"]);
+  if (!isBackupCademy) {
+    return { ok: false, error: "File ini bukan cadangan data akademik Cademy." };
+  }
+  if (typeof obj["version"] === "number" && obj["version"] > BACKUP_VERSION) {
+    return {
+      ok: false,
+      error: `Versi cadangan (${obj["version"]}) lebih baru dari aplikasi ini.`,
+    };
+  }
+  if (!Array.isArray(obj["tasks"])) {
+    return { ok: false, error: "Cadangan tidak punya daftar tugas." };
+  }
+  const tasks = normalizeList(obj["tasks"]);
+  if (tasks.length === 0) {
+    return { ok: false, error: "Tidak ada tugas valid yang bisa diimpor." };
+  }
+  return { ok: true, tasks, total: tasks.length };
+}
+
+/**
+ * Gabung cadangan ke data aktif. Dedupe by ID stabil; bila ID sama, data
+ * dengan createdAt lebih baru menang. mode "ganti" = file menang, tapi
+ * tugas lama yang tidak ada di file tetap boleh dibawa bila keepLama.
+ */
+export function gabungCadangan(
+  aktif: SharedTask[],
+  masuk: SharedTask[],
+  mode: "gabung" | "ganti"
+): SharedTask[] {
+  if (mode === "ganti") return normalizeList(masuk);
+  const map = new Map<string, SharedTask>();
+  for (const t of aktif) map.set(t.id, t);
+  for (const m of masuk) {
+    const lama = map.get(m.id);
+    if (!lama || m.createdAt > lama.createdAt) map.set(m.id, m);
+  }
+  return normalizeList([...map.values()]);
+}

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;800&amp;family=Plus+Jakarta+Sans:wght@400;500;700&amp;family=Space+Grotesk:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-tertiary-fixed": "#0a1e27", "surface": "#f6f9ff", "on-secondary-fixed-variant": "#2b4967", "secondary-fixed": "#d0e4ff", "on-tertiary": "#ffffff", "card-bg": "#FFFFFF", "on-secondary": "#ffffff", "primary-fixed": "#cce5ff", "on-surface-variant": "#41474e", "surface-container-highest": "#cae6ff", "on-background": "#001e30", "primary-fixed-dim": "#9bccf6", "brick-red": "#D93A2B", "secondary-container": "#bcdaff", "on-primary-fixed-variant": "#0f4b6f", "inverse-on-surface": "#e6f2ff", "on-primary-fixed": "#001e31", "surface-container-high": "#d6ebff", "tertiary-container": "#364953", "ink-black": "#000000", "on-error-container": "#93000a", "on-secondary-container": "#42607f", "inverse-surface": "#04344e", "tertiary": "#20323c", "page-bg": "#EAF5FC", "tertiary-fixed-dim": "#b6c9d6", "inverse-primary": "#9bccf6", "outline-variant": "#c1c7cf", "surface-container-low": "#ecf5ff", "primary": "#00334f", "surface-container-lowest": "#ffffff", "secondary-fixed-dim": "#abc9ed", "surface-bright": "#f6f9ff", "on-secondary-fixed": "#001d35", "error-container": "#ffdad6", "panel-bg": "#D9EDFA", "secondary": "#436180", "on-tertiary-fixed-variant": "#374954", "on-tertiary-container": "#a4b7c4", "surface-variant": "#cae6ff", "surface-container": "#e1f0ff", "tertiary-fixed": "#d1e5f2", "background": "#f6f9ff", "surface-tint": "#2f6388", "surface-dim": "#b9deff", "on-primary-container": "#89b9e3", "accent-yellow": "#FFD02B", "outline": "#72787f", "error": "#ba1a1a", "primary-container": "#0e4a6e", "on-primary": "#ffffff", "on-surface": "#001e30", "on-error": "#ffffff" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-sm": "0.5rem", "margin-desktop": "3rem", "space-xs": "0.25rem", "space-xl": "2.5rem", "gutter-desktop": "1.5rem", "space-lg": "1.5rem", "margin-tablet": "2rem", "gutter": "1rem", "margin": "1rem", "space-md": "1rem" }, "fontFamily": { "label-md": [ "Space Grotesk" ], "display-hero": [ "Bricolage Grotesque" ], "label-lg": [ "Space Grotesk" ], "body-sm": [ "Plus Jakarta Sans" ], "headline-lg-mobile": [ "Bricolage Grotesque" ], "headline-md": [ "Bricolage Grotesque" ], "label-caps": [ "Space Grotesk" ], "headline-sm": [ "Bricolage Grotesque" ], "display-hero-mobile": [ "Bricolage Grotesque" ], "body-md": [ "Plus Jakarta Sans" ], "headline-lg": [ "Bricolage Grotesque" ], "body-lg": [ "Plus Jakarta Sans" ] }, "fontSize": { "label-md": [ "12px", { "lineHeight": "16px", "letterSpacing": "0.04em", "fontWeight": "700" } ], "display-hero": [ "48px", { "lineHeight": "54px", "letterSpacing": "-0.03em", "fontWeight": "800" } ], "label-lg": [ "14px", { "lineHeight": "18px", "letterSpacing": "0.02em", "fontWeight": "700" } ], "body-sm": [ "14px", { "lineHeight": "20px", "fontWeight": "400" } ], "headline-lg-mobile": [ "26px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" } ], "headline-md": [ "24px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "700" } ], "label-caps": [ "11px", { "lineHeight": "14px", "letterSpacing": "0.08em", "fontWeight": "800" } ], "headline-sm": [ "20px", { "lineHeight": "26px", "letterSpacing": "0em", "fontWeight": "700" } ], "display-hero-mobile": [ "32px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "800" } ], "body-md": [ "16px", { "lineHeight": "24px", "fontWeight": "400" } ], "headline-lg": [ "36px", { "lineHeight": "42px", "letterSpacing": "-0.02em", "fontWeight": "700" } ], "body-lg": [ "18px", { "lineHeight": "28px", "fontWeight": "500" } ] } } } };</script></head><body class="bg-page-bg text-on-surface font-body-md text-body-md"><header class="fixed top-0 left-0 right-0 z-50 bg-card-bg border-b-[3px] border-ink-black shadow-[0_4px_0_0_#000000]"><div class="h-20 max-w-[1280px] mx-auto px-margin flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-sm"><div class="w-10 h-10 bg-accent-yellow border-[3px] border-ink-black shadow-[2px_2px_0_0_#000000] rounded-lg flex items-center justify-center"><span class="material-symbols-outlined text-ink-black text-[22px]">school</span></div><div class="flex items-center gap-space-xs"><span class="font-headline-md text-headline-md text-ink-black">Academic Hub</span><span class="bg-accent-yellow text-ink-black font-label-caps text-label-caps border-[2px] border-ink-black shadow-[2px_2px_0_0_#000000] px-space-xs py-0.5 rounded-full uppercase">BETA V2.4</span></div></div><nav class="hidden lg:flex items-center gap-space-xs bg-panel-bg p-space-xs border-[3px] border-ink-black rounded-xl shadow-[3px_3px_0_0_#000000]" data-active-classes="bg-primary-container text-on-primary border-[2px] border-ink-black shadow-[2px_2px_0_0_#000000]"><a class="px-space-md py-space-xs font-label-lg text-label-lg rounded-lg text-on-surface-variant hover:text-ink-black hover:bg-card-bg transition-colors" data-path="home" href="#">Home</a><a class="px-space-md py-space-xs font-label-lg text-label-lg rounded-lg text-on-surface-variant hover:text-ink-black hover:bg-card-bg transition-colors" data-path="tools" href="#">Tools</a><a aria-current="page" class="px-space-md py-space-xs font-label-lg rounded-lg transition-colors bg-primary-container text-on-primary border-[2px] border-ink-black shadow-[2px_2px_0_0_#000000]" data-path="jadwal-kuliah" href="#">Jadwal / Kuliah</a><a class="px-space-md py-space-xs font-label-lg text-label-lg rounded-lg text-on-surface-variant hover:text-ink-black hover:bg-card-bg transition-colors" data-path="categories" href="#">Categories</a><a class="px-space-md py-space-xs font-label-lg text-label-lg rounded-lg text-on-surface-variant hover:text-ink-black hover:bg-card-bg transition-colors" data-path="about" href="#">About</a></nav><div class="flex items-center gap-space-md"><div class="hidden md:flex items-center justify-between w-60 h-10 px-space-sm bg-card-bg border-[3px] border-ink-black shadow-[3px_3px_0_0_#000000] rounded-lg"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-outline text-[18px]">search</span><span class="font-body-sm text-body-sm text-outline">Search catalog...</span></div><kbd class="bg-panel-bg text-ink-black border-[2px] border-ink-black shadow-[1px_1px_0_0_#000000] rounded px-1.5 py-0.5 font-label-caps text-label-caps">⌘K</kbd></div><div class="w-9 h-9 rounded-full bg-primary border-[3px] border-ink-black shadow-[2px_2px_0_0_#000000] flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-20 bg-page-bg min-h-screen"><div class="flex flex-col w-full">
+<div class="max-w-[1240px] w-full mx-auto px-margin-desktop py-space-xl flex flex-col gap-space-lg">
+<!-- TOP HEADER & BREADCRUMBS -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">
+<a class="hover:text-ink-black transition-colors" href="#">Tools</a>
+<span>/</span>
+<span class="text-ink-black font-label-lg text-label-lg">Jadwal &amp; Task Board</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-ink-black tracking-tight">
+          Jadwal Kuliah &amp; Task Board Skripsi
+        </h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+          Manajemen timeline bimbingan, sidang akhir, dan pelacak tugas-tugas akademik secara terintegrasi.
+        </p>
+</div>
+<!-- Quick Action Controls -->
+<div class="flex items-center gap-space-sm flex-wrap shrink-0">
+<div class="flex items-center bg-card-bg border-[3px] border-ink-black shadow-[3px_3px_0px_0px_#000000] rounded-xl p-1 gap-1">
+<button class="px-space-md py-space-xs rounded-lg font-label-md text-label-md bg-primary-container text-on-primary border-[2px] border-ink-black shadow-[2px_2px_0px_0px_#000000] flex items-center gap-1.5 transition-all" id="toggleAgendaBtn">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+            Agenda &amp; Timeline
+          </button>
+<button class="px-space-md py-space-xs rounded-lg font-label-md text-label-md bg-card-bg text-on-surface hover:bg-surface-container-low border-[2px] border-transparent transition-all flex items-center gap-1.5" id="toggleKanbanBtn">
+<span class="material-symbols-outlined text-[18px]">view_kanban</span>
+            Kanban Board
+          </button>
+</div>
+<button class="bg-accent-yellow text-ink-black font-label-lg text-label-lg px-space-md py-2.5 rounded-xl border-[3px] border-ink-black shadow-[4px_4px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[20px]">add_task</span>
+<span>+ Tambah Tugas Baru</span>
+</button>
+</div>
+</div>
+<!-- TARGET KELULUSAN HERO CARD -->
+<div class="w-full bg-card-bg border-[3px] border-ink-black rounded-2xl shadow-[5px_5px_0px_0px_#000000] p-space-lg flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-space-lg relative overflow-hidden">
+<!-- Decorative Neo-Brutalist Pattern Accent -->
+<div class="absolute -right-8 -bottom-10 opacity-10 pointer-events-none select-none text-ink-black">
+<span class="material-symbols-outlined text-[180px]">school</span>
+</div>
+<!-- Left Info -->
+<div class="flex items-center gap-space-md min-w-0">
+<div class="w-16 h-16 rounded-2xl bg-primary-container text-on-primary border-[3px] border-ink-black shadow-[3px_3px_0px_0px_#000000] flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[36px]">school</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="font-headline-sm text-headline-sm text-ink-black truncate">
+              TARGET KELULUSAN: Sidang Akhir Semester Genap
+            </span>
+<span class="bg-accent-yellow text-ink-black border-[2px] border-ink-black px-space-xs py-0.5 rounded-full font-label-caps text-label-caps shadow-[1px_1px_0px_0px_#000000]">
+              PRIORITAS UTAMA
+            </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1.5 mt-0.5">
+<span class="material-symbols-outlined text-[16px] text-ink-black">account_balance</span>
+            Fakultas Ilmu Komputer &amp; Sains Data • Periode Akademik 2024/2025
+          </p>
+</div>
+</div>
+<!-- Right Countdown & Status -->
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-space-md shrink-0 lg:pl-space-md lg:border-l-[3px] lg:border-ink-black">
+<div class="flex items-center gap-space-sm bg-panel-bg p-space-sm border-[3px] border-ink-black rounded-xl shadow-[3px_3px_0px_0px_#000000]">
+<div class="bg-brick-red text-card-bg px-space-sm py-1 rounded-lg border-[2px] border-ink-black font-label-lg text-label-lg flex items-center gap-1 shadow-[1px_1px_0px_0px_#000000]">
+<span class="material-symbols-outlined text-[16px]">timer</span>
+            H-18 Hari
+          </div>
+<div class="flex flex-col pr-space-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Sisa Waktu Naskah</span>
+<span class="font-label-md text-label-md text-ink-black">Sisa 18 Hari Menuju Sidang Terbuka</span>
+</div>
+</div>
+<!-- Progress Widget -->
+<div class="flex flex-col gap-1 w-full sm:w-44">
+<div class="flex justify-between items-center font-label-caps text-label-caps">
+<span class="text-on-surface-variant uppercase">Progress Skripsi</span>
+<span class="font-label-md text-ink-black font-bold">82%</span>
+</div>
+<div class="w-full h-4 bg-surface-container-high border-[2px] border-ink-black rounded-full overflow-hidden p-0.5">
+<div class="h-full bg-primary-container rounded-full border border-ink-black" style="width: 82%;"></div>
+</div>
+<span class="text-[11px] text-on-surface-variant">Revisi Semhas &amp; Bab 5</span>
+</div>
+</div>
+</div>
+<!-- MAIN TWO-COLUMN WORKSPACE -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- ============================================== -->
+<!-- COLUMN 1: Agenda Terdekat & Kalender (~40%)   -->
+<!-- ============================================== -->
+<div class="lg:col-span-5 flex flex-col gap-space-md">
+<!-- Kalender & Day Picker Card -->
+<div class="w-full bg-card-bg border-[3px] border-ink-black rounded-2xl shadow-[4px_4px_0px_0px_#000000] p-space-md flex flex-col gap-space-md">
+<div class="flex items-center justify-between border-b-[2px] border-ink-black pb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-ink-black text-[22px]">calendar_month</span>
+<span class="font-headline-sm text-headline-sm text-ink-black">Pekan Ini • Mei 2025</span>
+</div>
+<span class="bg-panel-bg text-ink-black font-label-caps text-label-caps border-[2px] border-ink-black shadow-[2px_2px_0px_0px_#000000] px-space-xs py-0.5 rounded">
+              MINGGU KE-14
+            </span>
+</div>
+<!-- Horizontal Day Selector Strip -->
+<div class="grid grid-cols-6 gap-2">
+<!-- Sen 14 -->
+<div class="flex flex-col items-center p-2 rounded-xl border-[2px] border-ink-black bg-surface-container-lowest hover:bg-surface-container cursor-pointer transition-all text-center">
+<span class="font-label-caps text-label-caps text-on-surface-variant">SEN</span>
+<span class="font-headline-sm text-headline-sm text-ink-black mt-0.5">14</span>
+</div>
+<!-- Sel 15 (ACTIVE) -->
+<div class="flex flex-col items-center p-2 rounded-xl border-[3px] border-ink-black bg-primary-container text-on-primary shadow-[3px_3px_0px_0px_#000000] cursor-pointer transition-all text-center relative -translate-y-0.5">
+<span class="font-label-caps text-label-caps text-on-primary-container">SEL</span>
+<span class="font-headline-sm text-headline-sm text-on-primary mt-0.5">15</span>
+<div class="w-1.5 h-1.5 rounded-full bg-accent-yellow border border-ink-black mt-1"></div>
+</div>
+<!-- Rab 16 -->
+<div class="flex flex-col items-center p-2 rounded-xl border-[2px] border-ink-black bg-surface-container-lowest hover:bg-surface-container cursor-pointer transition-all text-center">
+<span class="font-label-caps text-label-caps text-on-surface-variant">RAB</span>
+<span class="font-headline-sm text-headline-sm text-ink-black mt-0.5">16</span>
+<div class="w-1 h-1 rounded-full bg-brick-red mt-1"></div>
+</div>
+<!-- Kam 17 -->
+<div class="flex flex-col items-center p-2 rounded-xl border-[2px] border-ink-black bg-surface-container-lowest hover:bg-surface-container cursor-pointer transition-all text-center">
+<span class="font-label-caps text-label-caps text-on-surface-variant">KAM</span>
+<span class="font-headline-sm text-headline-sm text-ink-black mt-0.5">17</span>
+</div>
+<!-- Jum 18 -->
+<div class="flex flex-col items-center p-2 rounded-xl border-[2px] border-ink-black bg-surface-container-lowest hover:bg-surface-container cursor-pointer transition-all text-center">
+<span class="font-label-caps text-label-caps text-on-surface-variant">JUM</span>
+<span class="font-headline-sm text-headline-sm text-ink-black mt-0.5">18</span>
+<div class="w-1 h-1 rounded-full bg-accent-yellow mt-1"></div>
+</div>
+<!-- Sab 19 -->
+<div class="flex flex-col items-center p-2 rounded-xl border-[2px] border-ink-black bg-surface-container-lowest hover:bg-surface-container cursor-pointer transition-all text-center">
+<span class="font-label-caps text-label-caps text-on-surface-variant">SAB</span>
+<span class="font-headline-sm text-headline-sm text-ink-black mt-0.5">19</span>
+</div>
+</div>
+</div>
+<!-- Agenda Section Header -->
+<div class="flex items-center justify-between px-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="font-headline-sm text-headline-sm text-ink-black">Agenda Terdekat</span>
+<span class="bg-card-bg text-ink-black font-label-caps text-label-caps border-[2px] border-ink-black px-space-xs py-0.5 rounded shadow-[1px_1px_0px_0px_#000000]">
+              3 Agenda
+            </span>
+</div>
+<button class="font-label-md text-label-md text-ink-black hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+            Filter Prioritas
+          </button>
+</div>
+<!-- AGENDA CARDS LIST -->
+<div class="flex flex-col gap-space-md">
+<!-- Agenda Card 1 -->
+<div class="bg-card-bg border-[3px] border-ink-black rounded-xl shadow-[4px_4px_0px_0px_#000000] p-space-md flex flex-col gap-space-sm hover:translate-x-1 transition-transform">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-2">
+<input class="w-5 h-5 rounded border-[2px] border-ink-black accent-primary-container cursor-pointer" type="checkbox"/>
+<span class="bg-brick-red text-card-bg font-label-caps text-label-caps border-[2px] border-ink-black px-space-xs py-0.5 rounded shadow-[1px_1px_0px_0px_#000000]">
+                  TINGGI • DOSEN PEMBIMBING
+                </span>
+</div>
+<span class="bg-panel-bg text-ink-black font-label-caps text-label-caps border-[2px] border-ink-black px-2 py-0.5 rounded-full flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                DIKONFIRMASI
+              </span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-ink-black">Bimbingan Bab 4 &amp; 5</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Membahas validasi instrumen kuantitatif serta pengujian hipotesis ANOVA via SPSS.
+              </p>
+</div>
+<div class="flex items-center justify-between border-t-[2px] border-ink-black/20 pt-space-xs mt-1">
+<div class="flex items-center gap-space-md font-label-md text-label-md text-ink-black">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+                  10:00 WIB
+                </span>
+<span class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+                  R. Dosen 302
+                </span>
+</div>
+<div class="flex items-center gap-1.5">
+<div class="w-7 h-7 rounded-full bg-accent-yellow border-[2px] border-ink-black font-label-caps text-label-caps flex items-center justify-center font-bold text-ink-black shadow-[1px_1px_0px_0px_#000000]">
+                  SD
+                </div>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Pembimbing 1</span>
+</div>
+</div>
+</div>
+<!-- Agenda Card 2 -->
+<div class="bg-card-bg border-[3px] border-ink-black rounded-xl shadow-[4px_4px_0px_0px_#000000] p-space-md flex flex-col gap-space-sm hover:translate-x-1 transition-transform">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-2">
+<input class="w-5 h-5 rounded border-[2px] border-ink-black accent-primary-container cursor-pointer" type="checkbox"/>
+<span class="bg-amber-400 text-ink-black font-label-caps text-label-caps border-[2px] border-ink-black px-space-xs py-0.5 rounded shadow-[1px_1px_0px_0px_#000000]">
+                  SEDANG • BATAS AKHIR
+                </span>
+</div>
+<span class="bg-brick-red text-card-bg font-label-caps text-label-caps border-[2px] border-ink-black px-2 py-0.5 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">warning</span>
+                H-2 SUBMIT
+              </span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-ink-black">Deadline Revisi Naskah Semhas</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Upload PDF final beserta bukti persetujuan tanda tangan kaprodi ke portal SIAKAD.
+              </p>
+</div>
+<div class="flex items-center justify-between border-t-[2px] border-ink-black/20 pt-space-xs mt-1">
+<div class="flex items-center gap-space-md font-label-md text-label-md text-ink-black">
+<span class="flex items-center gap-1 text-brick-red">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+                  23:59 WIB
+                </span>
+<a class="flex items-center gap-1 text-primary hover:underline" href="#">
+<span class="material-symbols-outlined text-[16px]">link</span>
+                  Portal Akademik
+                </a>
+</div>
+<div class="flex items-center gap-1.5">
+<div class="w-7 h-7 rounded-full bg-secondary-container border-[2px] border-ink-black font-label-caps text-label-caps flex items-center justify-center font-bold text-ink-black shadow-[1px_1px_0px_0px_#000000]">
+                  SA
+                </div>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Siakad</span>
+</div>
+</div>
+</div>
+<!-- Agenda Card 3 -->
+<div class="bg-card-bg border-[3px] border-ink-black rounded-xl shadow-[4px_4px_0px_0px_#000000] p-space-md flex flex-col gap-space-sm hover:translate-x-1 transition-transform">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-2">
+<input class="w-5 h-5 rounded border-[2px] border-ink-black accent-primary-container cursor-pointer" type="checkbox"/>
+<span class="bg-panel-bg text-ink-black font-label-caps text-label-caps border-[2px] border-ink-black px-space-xs py-0.5 rounded shadow-[1px_1px_0px_0px_#000000]">
+                  NORMAL • PRESENTASI
+                </span>
+</div>
+<span class="bg-surface-container-highest text-ink-black font-label-caps text-label-caps border-[2px] border-ink-black px-2 py-0.5 rounded font-bold">
+                LAB 204
+              </span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-ink-black">Gladi Resik Slide Sidang</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Latihan penyampaian 15 menit bersama teman kelompok seminar dan uji konektor HDMI.
+              </p>
+</div>
+<div class="flex items-center justify-between border-t-[2px] border-ink-black/20 pt-space-xs mt-1">
+<div class="flex items-center gap-space-md font-label-md text-label-md text-ink-black">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+                  14:30 WIB
+                </span>
+<span class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">group</span>
+                  Teman Sejawat
+                </span>
+</div>
+<div class="flex items-center gap-1.5">
+<div class="w-7 h-7 rounded-full bg-primary-fixed border-[2px] border-ink-black font-label-caps text-label-caps flex items-center justify-center font-bold text-ink-black shadow-[1px_1px_0px_0px_#000000]">
+                  ARDN
+                </div>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Tim Peer</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ============================================== -->
+<!-- COLUMN 2: Papan Skripsi (Kanban Board) (~60%) -->
+<!-- ============================================== -->
+<div class="lg:col-span-7 flex flex-col gap-space-md">
+<!-- Kanban Board Container Card -->
+<div class="w-full bg-card-bg border-[3px] border-ink-black rounded-2xl shadow-[5px_5px_0px_0px_#000000] p-space-md flex flex-col gap-space-md">
+<!-- Board Header Bar -->
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-space-sm border-b-[3px] border-ink-black pb-space-sm">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-primary-container text-on-primary border-[2px] border-ink-black flex items-center justify-center shadow-[2px_2px_0px_0px_#000000]">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<h2 class="font-headline-md text-headline-md text-ink-black">Papan Skripsi</h2>
+<span class="bg-accent-yellow text-ink-black font-label-caps text-label-caps border-[2px] border-ink-black shadow-[2px_2px_0px_0px_#000000] px-space-xs py-0.5 rounded uppercase">
+                  KANBAN AKTIF
+                </span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant hidden sm:inline">• Total: 8 Kartu</span>
+</div>
+<button class="bg-card-bg text-ink-black border-[2px] border-ink-black px-space-sm py-1.5 rounded-lg font-label-md text-label-md shadow-[2px_2px_0px_0px_#000000] hover:bg-panel-bg flex items-center gap-1 active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all">
+<span class="material-symbols-outlined text-[18px]">add</span>
+              + Tambah Kartu
+            </button>
+</div>
+<!-- 3-Column Kanban Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md items-start">
+<!-- =========================== -->
+<!-- KANBAN COL 1: TO DO (3)     -->
+<!-- =========================== -->
+<div class="flex flex-col bg-panel-bg border-[3px] border-ink-black rounded-xl p-space-sm gap-space-sm">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-3 rounded-full bg-brick-red border-[2px] border-ink-black"></span>
+<span class="font-label-lg text-label-lg text-ink-black uppercase">To Do (3)</span>
+</div>
+<button class="w-6 h-6 rounded border-[2px] border-ink-black bg-card-bg flex items-center justify-center hover:bg-surface-container font-bold text-ink-black text-xs">
+                  +
+                </button>
+</div>
+<!-- Kanban Cards Stack -->
+<div class="flex flex-col gap-space-sm">
+<!-- Card 1.1 -->
+<div class="bg-card-bg border-[2px] border-ink-black rounded-lg p-space-sm shadow-[2px_2px_0px_0px_#000000] flex flex-col gap-2 cursor-grab active:cursor-grabbing hover:translate-y-[-2px] transition-transform">
+<div class="flex items-center justify-between">
+<span class="bg-surface-container-high text-ink-black font-label-caps text-label-caps border border-ink-black px-1.5 py-0.5 rounded">
+                      BAB 3
+                    </span>
+<span class="material-symbols-outlined text-outline text-[16px]">drag_indicator</span>
+</div>
+<p class="font-body-sm text-body-sm text-ink-black font-medium line-clamp-2">
+                    Perbaiki diagram relasi ERD sesuai modul MySQL 8
+                  </p>
+<div class="flex items-center justify-between border-t border-ink-black/20 pt-1 text-on-surface-variant font-label-caps text-label-caps">
+<span class="flex items-center gap-1 text-brick-red font-bold">
+<span class="material-symbols-outlined text-[14px]">event</span>
+                      Besok
+                    </span>
+<span class="w-5 h-5 rounded-full bg-secondary-fixed border border-ink-black flex items-center justify-center text-[10px] font-bold">
+                      U
+                    </span>
+</div>
+</div>
+<!-- Card 1.2 -->
+<div class="bg-card-bg border-[2px] border-ink-black rounded-lg p-space-sm shadow-[2px_2px_0px_0px_#000000] flex flex-col gap-2 cursor-grab active:cursor-grabbing hover:translate-y-[-2px] transition-transform">
+<div class="flex items-center justify-between">
+<span class="bg-accent-yellow text-ink-black font-label-caps text-label-caps border border-ink-black px-1.5 py-0.5 rounded">
+                      LAMPIRAN
+                    </span>
+<span class="material-symbols-outlined text-outline text-[16px]">drag_indicator</span>
+</div>
+<p class="font-body-sm text-body-sm text-ink-black font-medium line-clamp-2">
+                    Format tata letak lampiran kuesioner Google Form
+                  </p>
+<div class="flex items-center justify-between border-t border-ink-black/20 pt-1 text-on-surface-variant font-label-caps text-label-caps">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                      18 Mei
+                    </span>
+<span class="w-5 h-5 rounded-full bg-tertiary-fixed border border-ink-black flex items-center justify-center text-[10px] font-bold">
+                      A
+                    </span>
+</div>
+</div>
+<!-- Card 1.3 -->
+<div class="bg-card-bg border-[2px] border-ink-black rounded-lg p-space-sm shadow-[2px_2px_0px_0px_#000000] flex flex-col gap-2 cursor-grab active:cursor-grabbing hover:translate-y-[-2px] transition-transform">
+<div class="flex items-center justify-between">
+<span class="bg-surface-container-high text-ink-black font-label-caps text-label-caps border border-ink-black px-1.5 py-0.5 rounded">
+                      LITERATUR
+                    </span>
+<span class="material-symbols-outlined text-outline text-[16px]">drag_indicator</span>
+</div>
+<p class="font-body-sm text-body-sm text-ink-black font-medium line-clamp-2">
+                    Review 3 paper IEEE tentang transformer NLP
+                  </p>
+<div class="flex items-center justify-between border-t border-ink-black/20 pt-1 text-on-surface-variant font-label-caps text-label-caps">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                      20 Mei
+                    </span>
+<span class="w-5 h-5 rounded-full bg-primary-fixed border border-ink-black flex items-center justify-center text-[10px] font-bold">
+                      R
+                    </span>
+</div>
+</div>
+</div>
+</div>
+<!-- ====================================== -->
+<!-- KANBAN COL 2: SEDANG DIKERJAKAN (1)    -->
+<!-- ====================================== -->
+<div class="flex flex-col bg-surface-container-high border-[3px] border-ink-black rounded-xl p-space-sm gap-space-sm">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-3 rounded-full bg-accent-yellow border-[2px] border-ink-black"></span>
+<span class="font-label-lg text-label-lg text-ink-black uppercase">Sedang Dikerjakan (1)</span>
+</div>
+<span class="material-symbols-outlined text-ink-black text-[18px]">sync</span>
+</div>
+<!-- Kanban Cards Stack -->
+<div class="flex flex-col gap-space-sm">
+<!-- Card 2.1 (Active Work) -->
+<div class="bg-card-bg border-[3px] border-ink-black rounded-lg p-space-sm shadow-[3px_3px_0px_0px_#000000] flex flex-col gap-2.5">
+<div class="flex items-center justify-between">
+<span class="bg-accent-yellow text-ink-black font-label-caps text-label-caps border border-ink-black px-1.5 py-0.5 rounded font-bold">
+                      REVISI SEMHAS
+                    </span>
+<span class="material-symbols-outlined text-ink-black text-[16px]">drag_indicator</span>
+</div>
+<p class="font-headline-sm text-[16px] leading-[22px] text-ink-black font-bold">
+                    Matriks revisi tanggapan komentar Dosen Penguji 1
+                  </p>
+<!-- In-card progress indicator -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant">
+<span>Progres Tugas</span>
+<span class="text-ink-black font-bold">75% Selesai</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container-low border border-ink-black rounded-full overflow-hidden">
+<div class="h-full bg-accent-yellow border-r border-ink-black" style="width: 75%;"></div>
+</div>
+</div>
+<div class="flex items-center justify-between border-t border-ink-black/20 pt-1 text-on-surface-variant font-label-caps text-label-caps">
+<span class="flex items-center gap-1 font-bold text-ink-black">
+<span class="material-symbols-outlined text-[14px]">comment</span>
+                      4 Catatan
+                    </span>
+<div class="flex -space-x-1">
+<span class="w-5 h-5 rounded-full bg-accent-yellow border border-ink-black flex items-center justify-center text-[10px] font-bold">
+                        SD
+                      </span>
+<span class="w-5 h-5 rounded-full bg-secondary-container border border-ink-black flex items-center justify-center text-[10px] font-bold">
+                        NH
+                      </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- =========================== -->
+<!-- KANBAN COL 3: SELESAI (4)   -->
+<!-- =========================== -->
+<div class="flex flex-col bg-panel-bg border-[3px] border-ink-black rounded-xl p-space-sm gap-space-sm">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-3 rounded-full bg-emerald-500 border-[2px] border-ink-black"></span>
+<span class="font-label-lg text-label-lg text-ink-black uppercase">Selesai (4)</span>
+</div>
+<span class="material-symbols-outlined text-ink-black text-[18px]">check_circle</span>
+</div>
+<!-- Kanban Cards Stack -->
+<div class="flex flex-col gap-space-sm">
+<!-- Card 3.1 -->
+<div class="bg-card-bg/90 border-[2px] border-ink-black rounded-lg p-space-sm shadow-[2px_2px_0px_0px_#000000] flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="bg-surface-container text-ink-black font-label-caps text-label-caps border border-ink-black px-1.5 py-0.5 rounded">
+                      ADMINISTRASI
+                    </span>
+<span class="material-symbols-outlined text-emerald-700 text-[18px] font-bold">done_all</span>
+</div>
+<p class="font-body-sm text-body-sm text-ink-black font-medium line-through opacity-80">
+                    Tanda tangan Berita Acara Pelaksanaan Seminar
+                  </p>
+<div class="flex items-center justify-between border-t border-ink-black/20 pt-1 text-on-surface-variant font-label-caps text-label-caps">
+<span class="text-emerald-700 font-bold">
+                      Tuntas pada 12 Mei • Disetujui Dosen
+                    </span>
+</div>
+</div>
+<!-- Card 3.2 -->
+<div class="bg-card-bg/90 border-[2px] border-ink-black rounded-lg p-space-sm shadow-[2px_2px_0px_0px_#000000] flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="bg-surface-container text-ink-black font-label-caps text-label-caps border border-ink-black px-1.5 py-0.5 rounded">
+                      LOGISTIK
+                    </span>
+<span class="material-symbols-outlined text-emerald-700 text-[18px] font-bold">done_all</span>
+</div>
+<p class="font-body-sm text-body-sm text-ink-black font-medium line-through opacity-80">
+                    Cetak draft naskah sidang jilid lakban 3 eksemplar
+                  </p>
+<div class="flex items-center justify-between border-t border-ink-black/20 pt-1 text-on-surface-variant font-label-caps text-label-caps">
+<span class="text-on-surface-variant">
+                      Tuntas pada 10 Mei
+                    </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ============================================== -->
+<!-- BOTTOM COLLABORATION STRIP (Tim Penguji)      -->
+<!-- ============================================== -->
+<div class="w-full bg-card-bg border-[3px] border-ink-black rounded-xl shadow-[4px_4px_0px_0px_#000000] p-space-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-md flex-wrap">
+<div class="flex items-center gap-2">
+<span class="font-label-lg text-label-lg text-ink-black">Tim Penguji &amp; Rekan Sejawat</span>
+<span class="bg-panel-bg text-ink-black font-label-caps text-label-caps border-[2px] border-ink-black px-space-xs py-0.5 rounded">
+                AKSES BACA &amp; KOMENTAR
+              </span>
+</div>
+<!-- Avatars Group -->
+<div class="flex items-center -space-x-2">
+<div class="w-8 h-8 rounded-full bg-accent-yellow border-[2px] border-ink-black flex items-center justify-center font-label-caps text-label-caps font-bold text-ink-black shadow-[1px_1px_0px_0px_#000000]" title="Prof. Dr. SD (Pembimbing 1)">
+                SD (1)
+              </div>
+<div class="w-8 h-8 rounded-full bg-secondary-fixed border-[2px] border-ink-black flex items-center justify-center font-label-caps text-label-caps font-bold text-ink-black shadow-[1px_1px_0px_0px_#000000]" title="Dr. NH (Pembimbing 2)">
+                NH (2)
+              </div>
+<div class="w-8 h-8 rounded-full bg-primary-fixed border-[2px] border-ink-black flex items-center justify-center font-label-caps text-label-caps font-bold text-ink-black shadow-[1px_1px_0px_0px_#000000]" title="RF (Penguji 1)">
+                RF
+              </div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border-[2px] border-ink-black flex items-center justify-center font-label-caps text-label-caps font-bold text-ink-black shadow-[1px_1px_0px_0px_#000000]" title="SA (Sekretaris Sidang)">
+                SA
+              </div>
+</div>
+<button class="px-space-xs py-1 rounded border-[2px] border-ink-black bg-card-bg hover:bg-surface-container font-label-caps text-label-caps text-ink-black shadow-[1px_1px_0px_0px_#000000]">
+              + Undang
+            </button>
+</div>
+<!-- Quick Action CTA Button -->
+<button class="bg-accent-yellow text-ink-black font-label-lg text-label-lg px-space-md py-2 rounded-lg border-[3px] border-ink-black shadow-[3px_3px_0px_0px_#000000] hover:shadow-[1px_1px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[3px] active:translate-y-[3px] transition-all flex items-center gap-1.5 shrink-0 self-stretch sm:self-auto justify-center">
+<span class="material-symbols-outlined text-[18px]">add_circle</span>
+            + Tambah Tugas Baru
+          </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Simple view switcher interaction for comic buttons
+  const agendaBtn = document.getElementById('toggleAgendaBtn');
+  const kanbanBtn = document.getElementById('toggleKanbanBtn');
+
+  if (agendaBtn && kanbanBtn) {
+    agendaBtn.addEventListener('click', () => {
+      agendaBtn.className = "px-space-md py-space-xs rounded-lg font-label-md text-label-md bg-primary-container text-on-primary border-[2px] border-ink-black shadow-[2px_2px_0px_0px_#000000] flex items-center gap-1.5 transition-all";
+      kanbanBtn.className = "px-space-md py-space-xs rounded-lg font-label-md text-label-md bg-card-bg text-on-surface hover:bg-surface-container-low border-[2px] border-transparent transition-all flex items-center gap-1.5";
+    });
+
+    kanbanBtn.addEventListener('click', () => {
+      kanbanBtn.className = "px-space-md py-space-xs rounded-lg font-label-md text-label-md bg-primary-container text-on-primary border-[2px] border-ink-black shadow-[2px_2px_0px_0px_#000000] flex items-center gap-1.5 transition-all";
+      agendaBtn.className = "px-space-md py-space-xs rounded-lg font-label-md text-label-md bg-card-bg text-on-surface hover:bg-surface-container-low border-[2px] border-transparent transition-all flex items-center gap-1.5";
+    });
+  }
+</script></main><footer class="w-full bg-card-bg border-t-[3px] border-ink-black shadow-[0_-4px_0_0_#000000] mt-space-xl"><div class="max-w-[1280px] mx-auto px-margin py-space-lg flex flex-col md:flex-row items-center justify-between gap-space-md"><div class="flex items-center gap-space-xs font-body-sm text-body-sm text-ink-black"><span class="font-label-md text-label-md uppercase tracking-wider">Academic Hub</span><span>© 2025 Open Research Consortium</span></div><div class="flex items-center gap-space-md font-label-md text-label-md text-on-surface-variant"><a class="hover:text-ink-black underline decoration-2 decoration-ink-black underline-offset-4" data-path="api-docs" href="#">Directory API Spec</a><span class="bg-panel-bg text-ink-black border-[2px] border-ink-black px-space-xs py-0.5 rounded font-label-caps text-label-caps">CC BY-SA 4.0</span></div></div></footer></body></html>
