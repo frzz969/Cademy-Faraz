@@ -38,5 +38,6 @@ pnpm-debug.log*
 bag1.zip
 bag2.zip
 *.tsbuildinfo
+stitch_academic/
 
 todoo.txt
