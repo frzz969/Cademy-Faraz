@@ -4,9 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { ToolShell } from "../../../components/ToolShell";
 import { Button, Panel } from "@cademy/ui";
+import { progresFase, progresRoadmap } from "@cademy/utils";
 import {
   loadTasks,
   saveTasks,
+  samaDaftar,
   bySource,
   type SharedTask,
   type SubTask,
@@ -48,6 +50,59 @@ interface Saved {
   phases: Phase[];
   revisions: Revision[];
   similarity: string;
+  /** catatan per fase (phaseId → teks) — ikut tersimpan & migrasi */
+  catatan: Record<string, string>;
+}
+
+const STATUS_REVISI_VALID = ["belum", "proses", "selesai"] as const;
+
+/** Bersihkan catatan fase dari simpanan (hanya string tak-kosong). */
+export function bersihkanCatatanFase(raw: unknown): Record<string, string> {
+  if (typeof raw !== "object" || raw === null) return {};
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "string" && v.trim() !== "") out[k] = v;
+  }
+  return out;
+}
+
+/**
+ * Normalisasi 1 revisi (murni, testable). ID tak-valid dibuat baru,
+ * status tak dikenal jadi "belum", teks dirapikan — record valid lain
+ * tidak dibuang.
+ */
+export function normalisasiRevisi(
+  raw: unknown,
+  buatId: () => string = uid
+): Revision | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  const lama = r as { catatan?: unknown; selesai?: unknown };
+  const judul =
+    (typeof r["judul"] === "string" && r["judul"].trim()) ||
+    (typeof lama.catatan === "string" && lama.catatan.trim()) ||
+    "Catatan revisi";
+  const statusRaw = typeof r["status"] === "string" ? r["status"] : "";
+  const status = (STATUS_REVISI_VALID as readonly string[]).includes(statusRaw)
+    ? (statusRaw as Revision["status"])
+    : lama.selesai === true
+      ? ("selesai" as const)
+      : ("belum" as const);
+  return {
+    id:
+      typeof r["id"] === "string" && r["id"].trim()
+        ? r["id"]
+        : `rev-${buatId()}`,
+    judul,
+    detail: typeof r["detail"] === "string" ? r["detail"] : "",
+    penguji:
+      typeof r["penguji"] === "string" && r["penguji"].trim()
+        ? r["penguji"]
+        : "Penguji",
+    mulai: typeof r["mulai"] === "string" ? r["mulai"] : "",
+    deadline: typeof r["deadline"] === "string" ? r["deadline"] : "",
+    status,
+  };
 }
 
 const KEY = "cademy:flowchart";
@@ -102,8 +157,130 @@ const PHASES: Phase[] = [
   },
 ];
 
-const DEFAULT_REVISIONS: Revision[] = [
+// Template awal roadmap (murni, testable). Bukan aturan kampus — pilih yang
+// paling dekat lalu sesuaikan (tambah/ubah/hapus/urut tetap bisa semua).
+export interface TemplateRoadmap {
+  id: string;
+  nama: string;
+  deskripsi: string;
+  phases: Array<{
+    title: string;
+    desc: string;
+    steps: Array<{ label: string; sub: string }>;
+  }>;
+}
+
+export const TEMPLATE_ROADMAP: TemplateRoadmap[] = [
   {
+    id: "kosong",
+    nama: "Kosong",
+    deskripsi: "Mulai dari nol — tambah fasemu sendiri.",
+    phases: [],
+  },
+  {
+    id: "proposal",
+    nama: "Proposal",
+    deskripsi: "Fokus sampai seminar proposal.",
+    phases: [
+      {
+        title: "Persiapan Proposal",
+        desc: "Topik & rumusan masalah",
+        steps: [
+          { label: "Topik & judul disetujui", sub: "Disahkan koordinator skripsi" },
+          { label: "Rumusan masalah jelas", sub: "Latar belakang + pertanyaan riset" },
+        ],
+      },
+      {
+        title: "Seminar Proposal",
+        desc: "Bab 1–3 & sempro",
+        steps: [
+          { label: "Draf Bab 1–3", sub: "Latar belakang, teori, metodologi" },
+          { label: "Daftar & ikut sempro", sub: "Berkas terverifikasi akademik" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "penelitian-sidang",
+    nama: "Penelitian → Sidang",
+    deskripsi: "Jalur umum: ambil data sampai sidang.",
+    phases: [
+      {
+        title: "Pengumpulan Data",
+        desc: "Instrumen & lapangan",
+        steps: [
+          { label: "Instrumen siap", sub: "Kuesioner/pedoman valid" },
+          { label: "Data terkumpul", sub: "Sesuai target responden" },
+        ],
+      },
+      {
+        title: "Analisis",
+        desc: "Olah data & Bab 4–5",
+        steps: [
+          { label: "Hasil diolah", sub: "Tabel + uji sesuai metode" },
+          { label: "Bab 4–5 ditulis", sub: "Pembahasan menjawab masalah" },
+        ],
+      },
+      {
+        title: "Sidang",
+        desc: "Presentasi & naskah uji",
+        steps: [
+          { label: "Slide presentasi", sub: "Pitch 15 menit" },
+          { label: "Naskah siap uji", sub: "Didistribusikan ke penguji" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "revisi",
+    nama: "Revisi",
+    deskripsi: "Fokus pasca-sidang sampai selesai.",
+    phases: [
+      {
+        title: "Revisi",
+        desc: "Perbaikan per penguji",
+        steps: [
+          { label: "Matriks revisi terisi", sub: "Respon tiap catatan penguji" },
+          { label: "Naskah diperbaiki", sub: "Sesuai matriks" },
+        ],
+      },
+      {
+        title: "Validasi & Selesai",
+        desc: "Pengesahan & yudisium",
+        steps: [
+          { label: "Pengesahan ditandatangani", sub: "Pembimbing + penguji" },
+          { label: "Yudisium & berkas akhir", sub: "SKL + unggah repositori" },
+        ],
+      },
+    ],
+  },
+];
+
+/**
+ * Terapkan template menjadi fase siap pakai (murni, testable).
+ * ID fase & langkah SELALU baru (dari `buatId`) supaya tak menabrak
+ * record centang langkah lain. Template tak dikenal → null.
+ */
+export function terapkanTemplate(
+  templateId: string,
+  buatId: () => string = uid
+): Phase[] | null {
+  const tpl = TEMPLATE_ROADMAP.find((t) => t.id === templateId);
+  if (!tpl) return null;
+  return tpl.phases.map((p, i) => ({
+    id: `fase-${buatId()}`,
+    no: String(i + 1).padStart(2, "0"),
+    title: p.title,
+    desc: p.desc,
+    steps: p.steps.map((s) => ({
+      id: `langkah-${buatId()}`,
+      label: s.label,
+      sub: s.sub,
+    })),
+  }));
+}
+
+const DEFAULT_REVISIONS: Revision[] = [  {
     id: "rev-1",
     judul: "Perkuat landasan teori Bab 2",
     detail: "",
@@ -153,6 +330,9 @@ export function susunRoadmap(
         title: s.label,
         description: s.sub,
         phaseId: p.id,
+        // Nama fase selalu ditulis (sebelumnya yatim: tak ada penulis hingga
+        // semua kartu roadmap berlabel generik "ROADMAP" di Jadwal/Planner).
+        phaseTitle: p.title,
         roadmapStepId: s.id,
         ...(lama?.dueDate ? { dueDate: lama.dueDate } : {}),
         // Field tambahan milik pengguna dipetakan dari definisi fase yang
@@ -168,6 +348,9 @@ export function susunRoadmap(
           : {}),
         createdAt: lama?.createdAt ?? new Date().toISOString(),
         ...(lama?.completedAt ? { completedAt: lama.completedAt } : {}),
+        // Arsip dipertahankan agar tugas roadmap yang diarsipkan dari
+        // Jadwal/Planner tidak bangkit lagi setiap roadmap disimpan.
+        ...(lama?.arsip ? { arsip: true as const } : {}),
       };
     })
   );
@@ -176,6 +359,16 @@ export function susunRoadmap(
 const inputCls =
   "h-11 w-full rounded-xl border-[3px] border-black bg-brand-panel px-3 font-body text-sm font-medium text-brand-navy outline-none focus:bg-white focus:ring-2 focus:ring-brand-blue";
 
+/**
+ * Perlukah benih awal roadmap saat mount (murni, testable).
+ * Benih hanya untuk store yang belum pernah ada; bila slice roadmap kosong
+ * karena pengguna menghapusnya dari Jadwal/Planner, jangan membangkitkan
+ * ulang tanpa perintah — hormati penghapusan.
+ */
+export function perluSeedRoadmap(mentahAda: boolean, roadmapCount: number): boolean {
+  return !mentahAda && roadmapCount === 0;
+}
+
 function load(): Saved | null {
   try {
     const raw = localStorage.getItem(KEY);
@@ -183,25 +376,20 @@ function load(): Saved | null {
     const p = JSON.parse(raw) as Saved & { revisionStart?: string };
     if (typeof p !== "object" || p === null) return null;
     // Migrasi bentuk lama: {steps, revisions[{catatan,selesai}]} → bentuk baru.
+    // Revisi tanpa judul yang bisa dipakai dibuang per-record (bukan semua).
     const revisiMentah = Array.isArray(p.revisions) ? p.revisions : [];
-    const revisiBaru: Revision[] = revisiMentah.map((r) => {
-      const lama = r as unknown as { catatan?: string; selesai?: boolean };
-      return {
-        id: r.id,
-        judul: lama.catatan ?? r.judul ?? "Catatan revisi",
-        detail: r.detail ?? "",
-        penguji: r.penguji ?? "Penguji",
-        mulai: r.mulai ?? "",
-        deadline: r.deadline ?? "",
-        status:
-          r.status ??
-          (lama.selesai === true ? ("selesai" as const) : ("belum" as const)),
-      };
-    });
+    const revisiBaru: Revision[] = [];
+    for (const r of revisiMentah) {
+      const jadi = normalisasiRevisi(r);
+      if (jadi) revisiBaru.push(jadi);
+    }
     return {
       phases: Array.isArray(p.phases) && p.phases.length > 0 ? p.phases : PHASES,
       revisions: revisiBaru.length > 0 ? revisiBaru : DEFAULT_REVISIONS,
       similarity: typeof p.similarity === "string" ? p.similarity : "",
+      catatan: bersihkanCatatanFase(
+        (p as Saved & { catatan?: unknown }).catatan
+      ),
     };
   } catch {
     return null;
@@ -228,7 +416,9 @@ export default function FlowchartSkripsiView() {
   const [steps, setSteps] = React.useState<Record<string, boolean>>({});
   const [revisions, setRevisions] = React.useState<Revision[]>(DEFAULT_REVISIONS);
   const [similarity, setSimilarity] = React.useState("");
-  const [open, setOpen] = React.useState<Record<string, boolean>>({ proposal: true });
+  const [open, setOpen] = React.useState<Record<string, boolean>>({});
+  const [modeAtur, setModeAtur] = React.useState(false);
+  const sudahAturBuka = React.useRef(false);
   const [ready, setReady] = React.useState(false);
   const [tambahFase, setTambahFase] = React.useState(false);
   const [faseJudul, setFaseJudul] = React.useState("");
@@ -245,9 +435,20 @@ export default function FlowchartSkripsiView() {
   const [revMulai, setRevMulai] = React.useState("");
   const [revDeadline, setRevDeadline] = React.useState("");
   const [catatanFase, setCatatanFase] = React.useState<Record<string, string>>({});
+  const [editRevisi, setEditRevisi] = React.useState<string | null>(null);
+  const [konfirmasiHapusRevisi, setKonfirmasiHapusRevisi] = React.useState<string | null>(null);
+  const [cuplikan, setCuplikan] = React.useState<SharedTask[]>([]);
   const [stepBaru, setStepBaru] = React.useState<Record<string, { label: string; sub: string; deadline: string }>>({});
 
   React.useEffect(() => {
+    // Keberadaan store SEBELUM loadTasks (loadTasks menulis saat migrasi
+    // pengguna baru) — penentu benih awal, lihat perluSeedRoadmap.
+    let mentahAda = false;
+    try {
+      mentahAda = localStorage.getItem("cademy:tasks-v1") !== null;
+    } catch {
+      /* abaikan — anggap pengguna baru */
+    }
     const all = loadTasks();
     const saved = load();
     // Fase boleh dikustomisasi — template bawaan hanya awal.
@@ -256,14 +457,16 @@ export default function FlowchartSkripsiView() {
     const roadmap = bySource(all, "roadmap");
     const next: Record<string, boolean> = {};
     for (const t of roadmap) if (t.roadmapStepId) next[t.roadmapStepId] = t.status === "done";
-    if (roadmap.length === 0) {
+    if (perluSeedRoadmap(mentahAda, roadmap.length)) {
       saveTasks(all.concat(susunRoadmap(faseAwal, {}, all)));
     }
     setSteps(next);
     if (saved) {
       setRevisions(saved.revisions.length > 0 ? saved.revisions : DEFAULT_REVISIONS);
       setSimilarity(saved.similarity);
+      setCatatanFase(saved.catatan);
     }
+    setCuplikan(bySource(all, "roadmap"));
     setReady(true);
   }, []);
 
@@ -271,17 +474,87 @@ export default function FlowchartSkripsiView() {
     if (ready) {
       const all = loadTasks();
       const rest = all.filter((t) => t.source !== "roadmap");
-      saveTasks(rest.concat(susunRoadmap(phases, steps, all)));
+      const slice = susunRoadmap(phases, steps, all);
+      // Lewati tulis bila sama (anti gema lintas-tab).
+      const tulis = rest.concat(slice);
+      if (!samaDaftar(tulis, all)) saveTasks(tulis);
+      setCuplikan((dulu) =>
+        JSON.stringify(slice) === JSON.stringify(dulu) ? dulu : slice
+      );
       try {
         localStorage.setItem(
           KEY,
-          JSON.stringify({ phases, revisions, similarity } satisfies Saved)
+          JSON.stringify({ phases, revisions, similarity, catatan: catatanFase } satisfies Saved)
         );
       } catch {
         /* abaikan */
       }
     }
-  }, [phases, steps, revisions, similarity, ready]);
+  }, [phases, steps, revisions, similarity, catatanFase, ready]);
+
+  // Buka default hanya fase berjalan (sisanya tertutup agar ringkas).
+  React.useEffect(() => {
+    if (!ready || sudahAturBuka.current) return;
+    sudahAturBuka.current = true;
+    let target = phases.find((p) => {
+      const done = p.steps.filter((s) => steps[s.id]).length;
+      return done > 0 && done < p.steps.length;
+    });
+    if (!target) target = phases.find((p) => p.steps.some((s) => !steps[s.id])) ?? phases[0];
+    if (target) setOpen({ [target.id]: true });
+  }, [ready, phases, steps]);
+
+  // Segarkan dari kunci + store saat tab kembali fokus / storage berubah
+  // (pola sama seperti planner): suntingan tab/tool lain — termasuk status
+  // roadmap yang diubah dari Jadwal — tak lagi tertimpa state basi.
+  // Aman karena semua suntingan lokal langsung tersimpan (store selalu segar).
+  React.useEffect(() => {
+    if (!ready) return;
+    function segar() {
+      try {
+        const all = loadTasks();
+        const saved = load();
+        if (saved) {
+          // Kembalikan prev bila sama: tak ada render ulang → tak ada
+          // efek simpan lanjutan → gema berhenti.
+          const faseBaru = saved.phases.length > 0 ? saved.phases : PHASES;
+          setPhases((dulu) =>
+            JSON.stringify(faseBaru) === JSON.stringify(dulu) ? dulu : faseBaru
+          );
+          const revBaru =
+            saved.revisions.length > 0 ? saved.revisions : DEFAULT_REVISIONS;
+          setRevisions((dulu) =>
+            JSON.stringify(revBaru) === JSON.stringify(dulu) ? dulu : revBaru
+          );
+          setSimilarity((dulu) => (dulu === saved.similarity ? dulu : saved.similarity));
+          setCatatanFase((dulu) =>
+            JSON.stringify(saved.catatan) === JSON.stringify(dulu)
+              ? dulu
+              : saved.catatan
+          );
+        }
+        const next: Record<string, boolean> = {};
+        for (const t of bySource(all, "roadmap")) {
+          if (t.roadmapStepId) next[t.roadmapStepId] = t.status === "done";
+        }
+        setSteps((dulu) =>
+          JSON.stringify(next) === JSON.stringify(dulu) ? dulu : next
+        );
+        setCuplikan((dulu) => {
+          const jadi = bySource(all, "roadmap");
+          return JSON.stringify(jadi) === JSON.stringify(dulu) ? dulu : jadi;
+        });
+      } catch {
+        /* abaikan */
+      }
+    }
+    window.addEventListener("focus", segar);
+    window.addEventListener("storage", segar);
+    return () => {
+      window.removeEventListener("focus", segar);
+      window.removeEventListener("storage", segar);
+    };
+  }, [ready]);
 
   function toggleStep(id: string) {
     setSteps((s) => ({ ...s, [id]: !s[id] }));
@@ -376,9 +649,17 @@ export default function FlowchartSkripsiView() {
     });
   }
 
+  // Progres satu rumus (lihat packages/utils/tasks): subtugas menang atas
+  // status; doing dihitung 50 dari cuplikan store; fase/roadmap kosong = 0.
+  const cuplikanStatus = new Map(cuplikan.map((t) => [t.roadmapStepId ?? "", t]));
+  const langkahProgres = (s: Step): { selesai: boolean; subtasks?: Array<{ done: boolean }>; status?: string } => ({
+    selesai: !!steps[s.id],
+    ...(s.subtasks && s.subtasks.length > 0 ? { subtasks: s.subtasks } : {}),
+    status: cuplikanStatus.get(s.id)?.status ?? "todo",
+  });
   const allSteps = phases.flatMap((p) => p.steps);
   const doneCount = allSteps.filter((s) => steps[s.id]).length;
-  const pct = allSteps.length === 0 ? 0 : Math.round((doneCount / allSteps.length) * 100);
+  const pct = progresRoadmap(phases.map((p) => p.steps.map(langkahProgres)));
 
   const hariIni = new Date();
   hariIni.setHours(0, 0, 0, 0);
@@ -400,23 +681,42 @@ export default function FlowchartSkripsiView() {
 
   function tambahRevisi() {
     if (!revJudul.trim() && !revDetail.trim()) return;
-    setRevisions((rs) => [
-      ...rs,
-      {
-        id: `rev-${uid()}`,
-        judul: revJudul.trim() || "Catatan revisi",
-        detail: revDetail.trim(),
-        penguji: revPenguji.trim() || "Penguji",
-        mulai: revMulai.trim(),
-        deadline: revDeadline.trim(),
-        status: "belum",
-      },
-    ]);
+    const jadi = normalisasiRevisi({
+      judul: revJudul.trim() || "Catatan revisi",
+      detail: revDetail.trim(),
+      penguji: revPenguji.trim() || "Penguji",
+      mulai: revMulai.trim(),
+      deadline: revDeadline.trim(),
+      status: "belum",
+    });
+    if (!jadi) return;
+    setRevisions((rs) => [...rs, jadi]);
     setRevJudul("");
     setRevDetail("");
     setRevPenguji("");
     setRevMulai("");
     setRevDeadline("");
+  }
+
+  function ubahRevisi(id: string, patch: Partial<Revision>) {
+    setRevisions((rs) => rs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  }
+
+  // Terapkan template: ganti seluruh fase (destruktif → konfirmasi jelas).
+  function pakaiTemplate(templateId: string) {
+    const tpl = TEMPLATE_ROADMAP.find((t) => t.id === templateId);
+    if (!tpl) return;
+    if (
+      !window.confirm(
+        `Pakai template "${tpl.nama}"? Seluruh fase dan centang saat ini akan diganti.`
+      )
+    )
+      return;
+    const ganti = terapkanTemplate(templateId);
+    if (!ganti) return;
+    setPhases(ganti);
+    setSteps({});
+    setCatatanFase({});
   }
 
   function reset() {
@@ -447,12 +747,13 @@ export default function FlowchartSkripsiView() {
 
   return (
     <ToolShell
-      eyebrow="Hub / Alat"
+      eyebrow="Cademy / Alat"
       title="Roadmap Skripsi"
       description="Panduan 4 fase dari proposal hingga wisuda: checklist langkah, matriks revisi 14 hari (acuan umum), dan ambang orisinalitas (acuan umum — cek pedoman kampusmu). Tersimpan di browser."
       icon="map"
       badge="4 Fase"
       badgeTone="info"
+      relatedSlot={<></>}
     >
       {/* Hero progres ala Stitch */}
       <div className="mb-5 rounded-2xl border-[3px] border-black bg-white p-5 shadow-brutal">
@@ -487,6 +788,9 @@ export default function FlowchartSkripsiView() {
           </div>
         </div>
         {/* Ringkas fase — komposisi desktop */}
+        <p className="mt-2 font-body text-[11px] text-brand-muted">
+          Rumus progres: subtugas menentukan nilai langkah; tanpa subtugas ikut status (Selesai 100, Dikerjakan 50).
+        </p>
         <div className="mt-3 hidden gap-2 sm:grid" style={{ gridTemplateColumns: `repeat(${Math.min(4, Math.max(1, phases.length))}, minmax(0, 1fr))` }}>
           {phases.map((p, i) => (
             <div key={p.id} className="rounded-xl border-2 border-black bg-brand-paper px-2 py-1.5 text-center shadow-brutal-sm">
@@ -501,11 +805,18 @@ export default function FlowchartSkripsiView() {
 
       {/* Tahapan alur */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-        <h2 className="font-display text-xl font-bold">Tahapan Alur Skripsi</h2>
-        <div className="flex items-center gap-2">
+        <h2 className="font-display text-xl font-bold">Tahapan Alur Skripsi</h2>        <div className="flex items-center gap-2">
           <span className="rounded-full border-[3px] border-black bg-brand-panel px-2.5 py-1 font-label text-[11px] font-extrabold shadow-brutal-sm">
             {pct}%
           </span>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => setModeAtur((v) => !v)}
+            aria-pressed={modeAtur}
+          >
+            {modeAtur ? "Selesai Atur" : "Atur"}
+          </Button>
           <Button
             size="sm"
             variant="accent"
@@ -516,6 +827,33 @@ export default function FlowchartSkripsiView() {
           </Button>
         </div>
       </div>
+
+      {/* Template awal — pilih yang paling dekat lalu sesuaikan */}
+      <details className="mt-2 rounded-2xl border-[3px] border-black bg-white px-4 py-2 shadow-brutal">
+        <summary className="cursor-pointer font-label text-xs font-extrabold uppercase text-brand-navy">
+          Mulai dari template
+        </summary>
+        <p className="mt-1 font-body text-xs text-brand-muted">
+          Template hanya titik awal (bukan aturan kampus). Memakai template mengganti seluruh fase — sesuaikan dulu sebelum dipakai.
+        </p>
+        <div className="grid grid-cols-1 gap-2 py-2 sm:grid-cols-2">
+          {TEMPLATE_ROADMAP.map((t) => (
+            <div key={t.id} className="flex items-center justify-between gap-2 rounded-xl border-2 border-black bg-brand-panel p-2.5">
+              <div className="min-w-0">
+                <p className="font-display text-sm font-bold text-brand-navy">{t.nama}</p>
+                <p className="text-xs text-brand-muted">{t.deskripsi}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => pakaiTemplate(t.id)}
+                className="h-9 shrink-0 rounded-full border-2 border-black bg-brand-yellow px-3 font-label text-[11px] font-extrabold uppercase text-black shadow-[2px_2px_0px_#000000]"
+              >
+                Pakai
+              </button>
+            </div>
+          ))}
+        </div>
+      </details>
 
       {tambahFase && (
         <div className="mt-2 rounded-2xl border-[3px] border-black bg-brand-panel p-4 shadow-brutal">
@@ -556,6 +894,7 @@ export default function FlowchartSkripsiView() {
         {phases.map((phase, i) => {
           const st = statuses[i];
           const n = phase.steps.filter((s) => steps[s.id]).length;
+          const pctFase = progresFase(phase.steps.map(langkahProgres));
           const isOpen = !!open[phase.id];
           const formStep = stepBaru[phase.id] ?? { label: "", sub: "", deadline: "" };
           const catatan = catatanFase[phase.id] ?? "";
@@ -605,6 +944,7 @@ export default function FlowchartSkripsiView() {
                       <span aria-hidden className={`text-xl transition-transform ${isOpen ? "rotate-180" : ""}`}>▾</span>
                     </span>
                   </button>
+                  {modeAtur && (
                   <div className="flex shrink-0 items-center gap-1">
                     {editFase === phase.id ? (
                       <button
@@ -658,6 +998,7 @@ export default function FlowchartSkripsiView() {
                       Hapus
                     </button>
                   </div>
+                  )}
                 </div>
                 {konfirmasiHapusFase === phase.id && (
                   <div className="mt-2 rounded-lg border-2 border-black bg-brand-panel p-2.5">
@@ -689,20 +1030,14 @@ export default function FlowchartSkripsiView() {
                         Kelengkapan Dokumen
                       </span>
                       <span className="font-label text-[11px] font-extrabold">
-                        {n}/{phase.steps.length} •{" "}
-                        {phase.steps.length === 0
-                          ? "0%"
-                          : Math.round((n / phase.steps.length) * 100).toString() + "%"}
+                        {n}/{phase.steps.length} • {pctFase}%
                       </span>
                     </div>
                     <div className="mb-3 h-3 overflow-hidden rounded-full border-2 border-black bg-brand-paper">
                       <div
                         className="h-full bg-brand-blue transition-all"
                         style={{
-                          width:
-                            phase.steps.length === 0
-                              ? "0%"
-                              : `${(n / phase.steps.length) * 100}%`,
+                          width: `${pctFase}%`,
                         }}
                       />
                     </div>
@@ -744,7 +1079,7 @@ export default function FlowchartSkripsiView() {
                                 ubahStep(phase.id, s.id, { dueDate: e.target.value })
                               }
                               className="h-9 rounded-lg border-2 border-black bg-white px-2 font-label text-xs"
-                              aria-label={`Deadline ${s.label}`}
+                              aria-label={`Tenggat ${s.label}`}
                             />
                             <input
                               value={s.notes ?? ""}
@@ -844,8 +1179,8 @@ export default function FlowchartSkripsiView() {
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="sm" variant="secondary" onClick={salinRekap}>Salin rekap</Button>
-          <Button size="sm" variant="secondary" onClick={reset}>Reset</Button>
+          <Button size="sm" variant="secondary" onClick={salinRekap}>Salin ringkasan</Button>
+          <Button size="sm" variant="secondary" onClick={reset}>Atur Ulang</Button>
         </div>
       </Panel>
 
@@ -855,6 +1190,7 @@ export default function FlowchartSkripsiView() {
             <h2 className="font-display text-lg font-bold">Matriks Revisi Penguji</h2>
             <p className="text-xs text-brand-muted">
               Catat setiap revisi tanpa batas jumlah. {revDone}/{revisions.length} selesai.
+              Tersimpan di browser ini (fase, revisi, catatan, kemiripan); cadangan JSON tugas hanya mencakup checklist langkah.
             </p>
           </div>
           <span className="w-fit rounded-full border-2 border-black bg-brand-panel px-2.5 py-1 font-label text-[11px] font-extrabold text-brand-navy">
@@ -932,6 +1268,55 @@ export default function FlowchartSkripsiView() {
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  {editRevisi === r.id ? (
+                    <>
+                      <input
+                        value={r.judul}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          ubahRevisi(r.id, { judul: e.target.value })
+                        }
+                        className="h-9 min-w-[140px] flex-1 rounded-lg border-2 border-black bg-white px-2 font-body text-xs outline-none focus:bg-brand-paper"
+                        aria-label={`Judul revisi`}
+                      />
+                      <input
+                        value={r.detail}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          ubahRevisi(r.id, { detail: e.target.value })
+                        }
+                        placeholder="Detail…"
+                        className="h-9 min-w-[140px] flex-1 rounded-lg border-2 border-black bg-white px-2 font-body text-xs outline-none focus:bg-brand-paper"
+                        aria-label={`Detail revisi`}
+                      />
+                      <input
+                        value={r.penguji}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          ubahRevisi(r.id, { penguji: e.target.value })
+                        }
+                        placeholder="Penguji…"
+                        className="h-9 w-28 rounded-lg border-2 border-black bg-white px-2 font-body text-xs outline-none focus:bg-brand-paper"
+                        aria-label={`Penguji revisi`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditRevisi(null)}
+                        className="rounded-lg border-2 border-black bg-brand-yellow px-2 py-1 font-label text-[10px] font-extrabold uppercase text-black"
+                      >
+                        Selesai
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditRevisi(r.id);
+                        setKonfirmasiHapusRevisi(null);
+                      }}
+                      className="rounded-lg border-2 border-black bg-white px-2 py-1 font-label text-[10px] font-extrabold uppercase"
+                      aria-label={`Ubah revisi: ${r.judul}`}
+                    >
+                      Ubah
+                    </button>
+                  )}
                   <select
                     value={r.status}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -951,7 +1336,7 @@ export default function FlowchartSkripsiView() {
                     <option value="selesai">Selesai</option>
                   </select>
                   <label className="flex items-center gap-1 font-label text-[11px] font-bold">
-                    Deadline
+                    Tenggat
                     <input
                       type="date"
                       value={/^\d{4}-\d{2}-\d{2}/.test(r.deadline) ? r.deadline : ""}
@@ -962,18 +1347,44 @@ export default function FlowchartSkripsiView() {
                           )
                         )
                       }
-                      aria-label={`Deadline revisi: ${r.judul}`}
+                      aria-label={`Tenggat revisi: ${r.judul}`}
                       className="h-9 rounded-lg border-2 border-black bg-white px-2 font-label text-[11px]"
                     />
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setRevisions((rs) => rs.filter((x) => x.id !== r.id))}
-                    className="rounded-lg border-2 border-black bg-brand-brick px-2 py-1 font-label text-[10px] font-extrabold uppercase text-white"
-                    aria-label={`Hapus revisi: ${r.judul}`}
-                  >
-                    Hapus
-                  </button>
+                  {konfirmasiHapusRevisi === r.id ? (
+                    <span className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setKonfirmasiHapusRevisi(null)}
+                        className="rounded-lg border-2 border-black bg-white px-2 py-1 font-label text-[10px] font-extrabold uppercase"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRevisions((rs) => rs.filter((x) => x.id !== r.id));
+                          setKonfirmasiHapusRevisi(null);
+                        }}
+                        className="rounded-lg border-2 border-black bg-brand-navy px-2 py-1 font-label text-[10px] font-extrabold uppercase text-white"
+                        aria-label={`Yakin hapus revisi: ${r.judul}`}
+                      >
+                        Yakin hapus
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setKonfirmasiHapusRevisi(r.id);
+                        setEditRevisi(null);
+                      }}
+                      className="rounded-lg border-2 border-black bg-brand-brick px-2 py-1 font-label text-[10px] font-extrabold uppercase text-white"
+                      aria-label={`Hapus revisi: ${r.judul}`}
+                    >
+                      Hapus
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -1023,13 +1434,13 @@ export default function FlowchartSkripsiView() {
             />
           </label>
           <label className="block">
-            <span className="mb-1 block font-label text-xs font-extrabold uppercase">Deadline</span>
+            <span className="mb-1 block font-label text-xs font-extrabold uppercase">Tenggat</span>
             <input
               type="date"
               value={revDeadline}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRevDeadline(e.target.value)}
               className={inputCls}
-              aria-label="Deadline revisi"
+              aria-label="Tenggat revisi"
             />
           </label>
         </div>
@@ -1067,7 +1478,7 @@ export default function FlowchartSkripsiView() {
       </Panel>
 
       <div className="mt-5">
-        <h2 className="mb-2 font-display text-lg font-bold">Lanjut ke tools terkait</h2>
+        <h2 className="mb-2 font-display text-lg font-bold">Lanjut ke alat terkait</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {CTA.map((c) => (
             <Link

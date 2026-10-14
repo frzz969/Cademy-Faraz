@@ -38,6 +38,19 @@ export interface SharedTask {
   subtasks?: SubTask[];
   /** arsip: disembunyikan dari papan, tidak dihitung di progres */
   arsip?: boolean;
+  /**
+   * demo: data contoh (bukan data pengguna). Ditulis hanya lewat tombol
+   * "Coba contoh" — tak pernah di-seed otomatis. Hapus contoh tak
+   * menyentuh record non-demo. Flag asal (bukan kepemilikan): suntingan
+   * pengguna pada kartu contoh tetap berflag demo sampai contoh dihapus.
+   */
+  demo?: boolean;
+  /**
+   * Tugas berulang: induk menyimpan pola (indukId = id sendiri),
+   * tiap kejadian record sendiri (indukId = id induk). Tanpa scheduler:
+   * kejadian di-materialisasi di depan secara terbatas saat seri dibuat.
+   */
+  berulang?: InfoBerulang;
   createdAt: string;
   completedAt?: string;
 }
@@ -86,6 +99,15 @@ function write(key: string, value: unknown): void {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
     /* penyimpanan penuh / mode privat — abaikan, jangan crash */
+  }
+}
+
+/** Ada key-nya (walau isinya rusak) — beda dari belum pernah ada. */
+function exists(key: string): boolean {
+  try {
+    return localStorage.getItem(key) !== null;
+  } catch {
+    return false;
   }
 }
 
@@ -155,6 +177,9 @@ export function normalizeTask(raw: unknown): SharedTask | null {
   if (asStr(r["notes"])) task.notes = asStr(r["notes"]);
   if (subtasks.length > 0) task.subtasks = subtasks;
   if (r["arsip"] === true) task.arsip = true;
+  if (r["demo"] === true) task.demo = true;
+  const berulang = normalisasiBerulang(r["berulang"]);
+  if (berulang) task.berulang = berulang;
   if (asStr(r["completedAt"])) task.completedAt = asStr(r["completedAt"]);
   return task;
 }
@@ -192,30 +217,28 @@ function migrate(): SharedTask[] {
           : t["selesai"] === true
             ? "done"
             : "todo";
-      out.push(
-        normalizeTask({
-          ...t,
-          id: typeof t["id"] === "string" ? t["id"] : newId("planner"),
-          source: "planner",
-          status,
-          title: typeof t["nama"] === "string" ? t["nama"] : "",
-          description: typeof t["deskripsi"] === "string" ? t["deskripsi"] : "",
-        }) as SharedTask
-      );
+      const jadi = normalizeTask({
+        ...t,
+        id: typeof t["id"] === "string" ? t["id"] : newId("planner"),
+        source: "planner",
+        status,
+        title: typeof t["nama"] === "string" ? t["nama"] : "",
+        description: typeof t["deskripsi"] === "string" ? t["deskripsi"] : "",
+      });
+      if (jadi) out.push(jadi);
     }
   }
 
   const jadwalTasks = read<Array<Record<string, unknown>>>(LEGACY.jadwalTugas);
   if (Array.isArray(jadwalTasks)) {
     for (const t of jadwalTasks) {
-      out.push(
-        normalizeTask({
-          ...t,
-          id: typeof t["id"] === "string" ? t["id"] : newId("jadwal"),
-          source: "jadwal",
-          title: typeof t["judul"] === "string" ? t["judul"] : "",
-        }) as SharedTask
-      );
+      const jadi = normalizeTask({
+        ...t,
+        id: typeof t["id"] === "string" ? t["id"] : newId("jadwal"),
+        source: "jadwal",
+        title: typeof t["judul"] === "string" ? t["judul"] : "",
+      });
+      if (jadi) out.push(jadi);
     }
   }
 
@@ -224,19 +247,68 @@ function migrate(): SharedTask[] {
 
 /** Semua task (termasuk arsip). Data rusak dibuang per-record, bukan semua. */
 export function loadTasks(): SharedTask[] {
+  const adaKey = exists(STORE_KEY);
   const raw = read<unknown>(STORE_KEY);
   if (Array.isArray(raw)) return normalizeList(raw);
-  if (raw === null) {
+  if (!adaKey) {
+    // Belum pernah ada: migrasi sekali jalan dari key lama, lalu tulis.
     const migrated = migrate();
     write(STORE_KEY, migrated);
     return migrated;
   }
-  // data rusak total: jangan crash, mulai dari daftar kosong
+  // Key ADA tapi tak bisa dibaca (JSON rusak / bukan array): jangan timpa
+  // dengan [] — mulai dari daftar kosong dan biarkan isi lama apa adanya.
   return [];
 }
 
 export function saveTasks(tasks: SharedTask[]): void {
   write(STORE_KEY, normalizeList(tasks));
+}
+
+/**
+ * Kesetaraan daftar tugas (urutan + isi). Fondasi anti-gema tulis:
+ * efek simpan melewati saveTasks bila hasil susunan sama dengan store
+ * segar — tanpa ini, refresh lintas-tab (focus/storage) memicu gema
+ * simpan antar-tab tanpa henti (setiap tulis = event = tulis lagi).
+ * Kanonis (key diurut rekursif) supaya beda pembangun objek yang setara
+ * tak dianggap berubah; urutan array tetap berarti (reorder = berubah).
+ */
+export function samaDaftar(a: SharedTask[], b: SharedTask[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (kanonis(a[i]) !== kanonis(b[i])) return false;
+  }
+  return true;
+}
+
+function kanonis(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(kanonis).join(",")}]`;
+  if (typeof v === "object" && v !== null) {
+    const o = v as Record<string, unknown>;
+    return `{${Object.keys(o)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${kanonis(o[k])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(v) ?? "null";
+}
+
+/** Kesetaraan JSON umum (state struktural roadmap dkk). */
+export function samaJSON(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * Record asing: ada di store segar tapi belum pernah dikenal tab ini.
+ * Wajib dipertahankan saat simpan — beda dari hapus (record hapus pernah
+ * dikenal lalu hilang dari state). Fondasi anti-rugi tulis lintas-tab
+ * untuk slice yang ditulis ulang utuh dari state (jadwal/planner).
+ */
+export function asingBaru(
+  segar: SharedTask[],
+  dikenal: ReadonlySet<string>
+): SharedTask[] {
+  return segar.filter((t) => !dikenal.has(t.id));
 }
 
 export const bySource = (tasks: SharedTask[], src: TaskSource) =>
@@ -245,6 +317,15 @@ export const bySource = (tasks: SharedTask[], src: TaskSource) =>
 /** Tugas aktif = tidak diarsipkan. */
 export const tugasAktif = (tasks: SharedTask[]) =>
   tasks.filter((t) => !t.arsip);
+
+/** Daftar arsip (disembunyikan dari papan & statistik). */
+export const tugasArsip = (tasks: SharedTask[]) =>
+  tasks.filter((t) => t.arsip === true);
+
+/** Kembalikan tugas arsip ke papan aktif (tanpa membuat salinan). */
+export function pulihkanTugas(tasks: SharedTask[], id: string): SharedTask[] {
+  return arsipkanTugas(tasks, id, false);
+}
 
 /** Progres 1 tugas: subtask kalau ada (aturan konsisten), else status/progres. */
 export function taskProgress(task: SharedTask): number {
@@ -380,6 +461,173 @@ export function hapusSubtask(
   );
 }
 
+// ── Tugas berulang (local-first, tanpa scheduler) ───────────────────────────
+// Model jujur: seri = 1 induk berpola + N kejadian yang di-materialisasi di
+// depan secara TERBATAS saat seri dibuat. Tiap kejadian record sendiri
+// (ID deterministik `${indukId}@${iso}`) sehingga selesai/ubah/hapus satu
+// kejadian ≠ semua, dan simpan ulang tak pernah menggandakan (dedupe by ID
+// di saveTasks/gabungCadangan). Tanpa backend tidak ada yang menumbuhkan
+// kejadian baru otomatis — pengguna perpanjang seri dari kartunya.
+export type FrekuensiBerulang = "harian" | "mingguan" | "interval";
+
+export interface InfoBerulang {
+  frekuensi: FrekuensiBerulang;
+  /** langkah hari (harian=1, mingguan=7, interval=bebas 1..365) */
+  intervalHari: number;
+  /** induk: id sendiri; kejadian: id induk */
+  indukId: string;
+  /** ISO kejadian (induk: tanggal mulai) */
+  tanggal: string;
+}
+
+/** Batas materialisasi: induk + 30 kejadian ke depan. */
+export const MAKS_KEJADIAN_SERI = 31;
+
+const FREKUENSI_VALID: FrekuensiBerulang[] = ["harian", "mingguan", "interval"];
+
+/** ISO ketat yyyy-mm-dd + tanggal kalender nyata (tolak rollover). */
+function isoTanggalValid(s: unknown): s is string {
+  if (typeof s !== "string") return false;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+  if (!m) return false;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return false;
+  const dt = new Date(y, mo - 1, d);
+  return (
+    dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d
+  );
+}
+
+function tambahHariISO(iso: string, n: number): string {
+  const y = Number(iso.slice(0, 4));
+  const mo = Number(iso.slice(5, 7));
+  const d = Number(iso.slice(8, 10));
+  const dt = new Date(y, mo - 1, d + n);
+  const mm = `${dt.getMonth() + 1}`.padStart(2, "0");
+  const dd = `${dt.getDate()}`.padStart(2, "0");
+  return `${dt.getFullYear()}-${mm}-${dd}`;
+}
+
+function normalisasiBerulang(raw: unknown): InfoBerulang | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  if (!FREKUENSI_VALID.includes(r["frekuensi"] as FrekuensiBerulang))
+    return null;
+  const intervalHari =
+    typeof r["intervalHari"] === "number" &&
+    Number.isInteger(r["intervalHari"])
+      ? (r["intervalHari"] as number)
+      : 0;
+  if (intervalHari < 1 || intervalHari > 365) return null;
+  const indukId = typeof r["indukId"] === "string" ? r["indukId"] : "";
+  if (!indukId) return null;
+  if (!isoTanggalValid(r["tanggal"])) return null;
+  return {
+    frekuensi: r["frekuensi"] as FrekuensiBerulang,
+    intervalHari,
+    indukId,
+    tanggal: (r["tanggal"] as string).trim(),
+  };
+}
+
+export type HasilSeri =
+  | { ok: true; tugas: SharedTask[] }
+  | { ok: false; galat: string };
+
+/**
+ * Buat seri berulang: induk berpola + kejadian di depan (terbatas).
+ * Gagal dengan pesan jelas bila judul/mulai/pola tak valid — tak ada
+ * record setengah jadi yang ditulis pemanggil bila ok:false.
+ */
+export function buatSeriBerulang(input: {
+  source: TaskSource;
+  title: string;
+  description?: string;
+  tag?: string;
+  prioritas?: PrioritasT;
+  jam?: string;
+  frekuensi: FrekuensiBerulang;
+  intervalHari?: number;
+  mulai: string;
+  jumlah?: number;
+}): HasilSeri {
+  const judul = input.title.trim();
+  if (!judul) return { ok: false, galat: "Isi judul tugas terlebih dahulu!" };
+  if (!FREKUENSI_VALID.includes(input.frekuensi))
+    return { ok: false, galat: "Pola berulang tidak dikenal." };
+  const langkah =
+    input.frekuensi === "harian"
+      ? 1
+      : input.frekuensi === "mingguan"
+        ? 7
+        : Math.floor(Number(input.intervalHari));
+  if (!Number.isInteger(langkah) || langkah < 1 || langkah > 365)
+    return { ok: false, galat: "Interval harus bilangan bulat 1–365 hari." };
+  if (!isoTanggalValid(input.mulai))
+    return {
+      ok: false,
+      galat: "Pilih tanggal mulai yang valid (tenggat seri).",
+    };
+  const mulai = input.mulai.trim();
+  const jumlah = Math.min(
+    MAKS_KEJADIAN_SERI,
+    Math.max(2, Math.floor(Number(input.jumlah) || 5))
+  );
+  const sekarang = new Date().toISOString();
+  const indukId = uid(input.source);
+  const dasar = {
+    source: input.source,
+    title: judul,
+    prioritas: input.prioritas ?? ("sedang" as PrioritasT),
+    createdAt: sekarang,
+    ...(input.description?.trim()
+      ? { description: input.description.trim() }
+      : {}),
+    ...(input.tag?.trim() ? { tag: input.tag.trim() } : {}),
+    ...(input.jam?.trim() ? { jam: input.jam.trim() } : {}),
+  };
+  const keluar: SharedTask[] = [];
+  for (let i = 0; i < jumlah; i++) {
+    const iso = tambahHariISO(mulai, i * langkah);
+    keluar.push({
+      ...dasar,
+      id: i === 0 ? indukId : `${indukId}@${iso}`,
+      status: "todo",
+      dueDate: iso,
+      berulang: {
+        frekuensi: input.frekuensi,
+        intervalHari: langkah,
+        indukId,
+        tanggal: iso,
+      },
+    });
+  }
+  return { ok: true, tugas: keluar };
+}
+
+/** Anggota seri (induk + kejadian) terurut tanggal — referensi yang sama. */
+export function kejadianSeri(tasks: SharedTask[], indukId: string): SharedTask[] {
+  return tasks
+    .filter((t) => t.id === indukId || t.berulang?.indukId === indukId)
+    .sort((a, b) =>
+      (a.berulang?.tanggal ?? "").localeCompare(b.berulang?.tanggal ?? "")
+    );
+}
+
+/** Hapus 1 seri utuh (induk + semua kejadian). Hapus 1 kejadian: removeTask. */
+export function hapusSeri(tasks: SharedTask[], indukId: string): SharedTask[] {
+  return tasks.filter(
+    (t) => t.id !== indukId && t.berulang?.indukId !== indukId
+  );
+}
+
+/** Hapus permanen SEMUA arsip (aksi massal — panggil setelah konfirmasi UI). */
+export function kosongkanArsip(tasks: SharedTask[]): SharedTask[] {
+  return tugasAktif(tasks);
+}
+
 // ── Riwayat undo (sesi ini, di memori — jangan diklaim permanen) ─────────────
 const RIWAYAT_MAX = 20;
 const riwayat: { label: string; tasks: SharedTask[] }[] = [];
@@ -452,8 +700,9 @@ export function bacaCadangan(json: string): HasilBacaCadangan {
 
 /**
  * Gabung cadangan ke data aktif. Dedupe by ID stabil; bila ID sama, data
- * dengan createdAt lebih baru menang. mode "ganti" = file menang, tapi
- * tugas lama yang tidak ada di file tetap boleh dibawa bila keepLama.
+ * dengan createdAt lebih baru menang. mode "ganti" = isi file menjadi
+ * seluruh data (tugas lama yang tak ada di file dibuang — tawarkan hanya
+ * setelah ringkasan + konfirmasi di UI).
  */
 export function gabungCadangan(
   aktif: SharedTask[],

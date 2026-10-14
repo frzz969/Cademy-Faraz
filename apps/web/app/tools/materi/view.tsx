@@ -667,14 +667,6 @@ export default function MateriWorkspacePage() {
               <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">add</span>
               Buat ruang belajar
             </button>
-            <button
-              type="button"
-              onClick={openWsCreate}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-5 font-label text-xs font-bold text-brand-navy shadow-brutal transition-all hover:bg-brand-panel active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-            >
-              <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">post_add</span>
-              Tambahkan materi
-            </button>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <button

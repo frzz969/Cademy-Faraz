@@ -155,7 +155,7 @@ export default function PomodoroPage() {
   const riwayat = [...sessions].reverse();
 
   return (
-    <ToolShell eyebrow="Hub / Alat" title="Pomodoro Timer" description="Fokus 25 menit, istirahat 5/15 menit. Penghitung sesi tersimpan di browser." icon="⏱️" badge={`${sesi} sesi • ${totalMenit} mnt`} badgeTone="info">
+    <ToolShell eyebrow="Cademy / Alat" title="Pomodoro Timer" description="Fokus 25 menit, istirahat 5/15 menit. Penghitung sesi tersimpan di browser." icon="⏱️" badge={`${sesi} sesi • ${totalMenit} mnt`} badgeTone="info">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <Panel className="bg-white text-center lg:col-span-3">
           <div className="flex justify-center gap-2">
@@ -185,7 +185,7 @@ export default function PomodoroPage() {
           </label>
           <div className="mt-4 flex justify-center gap-2">
             <Button onClick={mulaiAtauJeda}>{jalan ? "⏸ Jeda" : "▶ Mulai"}</Button>
-            <Button variant="secondary" onClick={resetTimer}>↺ Reset</Button>
+            <Button variant="secondary" onClick={resetTimer}>↺ Atur Ulang</Button>
           </div>
           <p className="mt-3 text-sm font-semibold text-brand-muted">Sesi fokus selesai: {sesi} • Total fokus: {totalMenit} menit • Minggu ini: {mingguIni} menit</p>
         </Panel>
@@ -198,11 +198,11 @@ export default function PomodoroPage() {
               <label className="block space-y-1"><span className="text-xs font-bold">Panjang</span><input type="number" min={1} max={60} className={inputCls} value={panjang} onChange={(e) => setPanjang(Number(e.target.value) || 15)} /></label>
             </div>
             {!konfirmReset ? (
-              <Button size="sm" variant="secondary" onClick={() => setKonfirmReset(true)}>Reset statistik</Button>
+              <Button size="sm" variant="secondary" onClick={() => setKonfirmReset(true)}>Atur Ulang statistik</Button>
             ) : (
               <span className="flex items-center gap-2 text-xs font-bold">
-                Yakin reset?
-                <Button size="sm" variant="secondary" onClick={() => { setSesi(0); setTotalMenit(0); setSessions([]); setKonfirmReset(false); }}>Ya, reset</Button>
+                Yakin atur ulang?
+                <Button size="sm" variant="secondary" onClick={() => { setSesi(0); setTotalMenit(0); setSessions([]); setKonfirmReset(false); }}>Ya, atur ulang</Button>
                 <Button size="sm" variant="secondary" onClick={() => setKonfirmReset(false)}>Batal</Button>
               </span>
             )}

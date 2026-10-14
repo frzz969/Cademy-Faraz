@@ -477,7 +477,7 @@ export default function ThesisPage() {
   }
 
   return (
-    <ToolShell eyebrow="Hub / Alat" title="Thesis Checker" description="Checklist skripsi per proyek: bab, struktur, sitasi, dan bahasa. Progress tersimpan otomatis." icon="bolt" badge={`Beta • ${pct}%`} badgeTone="beta">
+    <ToolShell eyebrow="Cademy / Alat" title="Thesis Checker" description="Checklist skripsi per proyek: bab, struktur, sitasi, dan bahasa. Progress tersimpan otomatis." icon="bolt" badge={`Beta • ${pct}%`} badgeTone="beta">
       {/* Pemilih proyek */}
       <Panel className="mb-4 space-y-3 bg-white">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -756,7 +756,7 @@ export default function ThesisPage() {
                           value={st?.deadline ?? ""}
                           onChange={(e) => setField(it.id, "deadline", e.target.value)}
                           className={inputCls}
-                          aria-label={`Deadline: ${it.label}`}
+                          aria-label={`Tenggat: ${it.label}`}
                         />
                       </div>
                       <textarea

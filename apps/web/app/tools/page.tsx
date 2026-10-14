@@ -3,9 +3,9 @@ import { Suspense } from "react";
 import { ToolsView } from "./tools-view";
 
 export const metadata: Metadata = {
-  title: "Direktori Tools Akademik — Cademy",
+  title: "Direktori Alat Akademik — Cademy",
   description:
-    "Jelajahi semua tools akademik Cademy: sitasi, IPK, nilai sidang, PDF, perencana belajar, kuis, flashcards, pomodoro, dan checklist skripsi.",
+    "Jelajahi semua alat akademik Cademy: sitasi, IPK, nilai sidang, PDF, perencana belajar, kuis, flashcards, pomodoro, dan checklist skripsi.",
 };
 
 export default function ToolsPage() {

@@ -27,7 +27,7 @@ export default function AiDetectorView() {
 
   return (
     <ToolShell
-      eyebrow="Hub / Alat"
+      eyebrow="Cademy / Alat"
       title="AI Detector"
       description="Simulasi heuristik lokal untuk edukasi — bukan detektor sungguhan. Coba simulasi di bawah atau buka tool eksternal."
       icon="smart_toy"

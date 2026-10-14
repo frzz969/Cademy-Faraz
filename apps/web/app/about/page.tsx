@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -21,7 +21,7 @@ const misi = [
     iconBg: "bg-[#0E4A6E] text-[#FFFFFF]",
     title: "Cepat dan sederhana",
     desc: "Client-side calculators untuk respons instan 0ms, pemuatan lazy loading untuk perkakas komputasi berat tanpa latensi jaringan.",
-    foot: "0ms Response Client",
+    foot: "Respons 0ms di Browser",
     footIcon: "speed",
   },
   {
@@ -29,7 +29,7 @@ const misi = [
     iconBg: "bg-[#D9EDFA] text-[#0E4A6E]",
     title: "Privasi dulu",
     desc: "Dokumen tidak disimpan ke basis data secara default, pengolahan API key aman di server, dan enkripsi HTTPS penuh untuk ketenangan pikiran.",
-    foot: "No Data Retention",
+    foot: "Tanpa Simpan Data",
     footIcon: "verified_user",
   },
 ];
@@ -42,7 +42,7 @@ const fase1 = [
     badge: "External",
     badgeCls: "bg-[#D93A2B] text-[#FFFFFF]",
     desc: "Analisis struktur teks esai dan estimasi probabilitas konten yang dihasilkan oleh model generator AI populer untuk integritas akademis.",
-    foot: "Tersambung Langsung ⧉",
+    foot: "Tersambung Langsung ?",
     cta: "Buka",
     ctaIcon: "open_in_new",
     ctaCls: "bg-[#FFFFFF] text-[#0B2E4B] hover:bg-[#D9EDFA]",
@@ -110,13 +110,13 @@ export default function AboutPage() {
           </div>
           <div className="flex max-w-3xl flex-col gap-2">
             <h1 className="font-display text-3xl font-black leading-tight tracking-tight text-[#0B2E4B] sm:text-5xl">
-              About{" "}
+              Tentang{" "}
               <span className="inline-block rounded-lg border-2 border-black bg-[#FFD02B] px-2 py-0.5 text-[#0B2E4B] shadow-[2px_2px_0px_#000000]">
-                Academic Hub
+                Cademy
               </span>
             </h1>
             <p className="mt-1 font-body text-lg font-medium text-[#4E7390] sm:text-xl">
-              Academic tools in one place. Tools for students, research, and everyday academic work.
+              Peralatan akademik dalam satu tempat. Untuk mahasiswa, riset, dan kerja akademik sehari-hari.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -203,11 +203,11 @@ export default function AboutPage() {
         <section className="space-y-5 rounded-2xl border-[3px] border-black bg-[#FFFFFF] p-6 shadow-[4px_4px_0px_#000000]">
           <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
             <div>
-              <span className="font-body text-xs font-bold uppercase text-[#4E7390]">Modern Engineering Stack</span>
-              <h2 className="font-display text-2xl font-black text-[#0B2E4B]">Teknologi di Balik Academic Hub</h2>
+              <span className="font-body text-xs font-bold uppercase text-[#4E7390]">Tumpukan Teknologi Modern</span>
+              <h2 className="font-display text-2xl font-black text-[#0B2E4B]">Teknologi di Balik Cademy</h2>
             </div>
             <span className="w-fit rounded-full border-2 border-black bg-[#D9EDFA] px-3 py-1 font-body text-xs font-bold text-[#0B2E4B]">
-              High Performance • Monorepo
+              Performa Tinggi • Monorepo
             </span>
           </div>
           <div className="flex flex-wrap gap-2.5 pt-1">
@@ -245,7 +245,7 @@ export default function AboutPage() {
                   <div className="flex items-center justify-between">
                     <span aria-hidden className="text-2xl text-[#0E4A6E]">{r.icon}</span>
                     <span className="rounded-md border-2 border-black bg-[#D9EDFA] px-2 py-0.5 font-body text-xs font-bold uppercase text-[#0B2E4B]">
-                      Coming Soon
+                      Segera Hadir
                     </span>
                   </div>
                   <h3 className="font-display text-xl font-bold text-[#0B2E4B]">{r.title}</h3>
@@ -268,7 +268,7 @@ export default function AboutPage() {
                 Punya ide alat akademik baru?
               </h2>
               <p className="font-body text-base leading-relaxed text-[#4E7390]">
-                Academic Hub terus berkembang berkat masukan dari rekan mahasiswa, dosen, dan peneliti independen. Kirimkan saran atau laporkan bug melalui kanal terbuka kami.
+                Cademy terus berkembang berkat masukan dari rekan mahasiswa, dosen, dan peneliti independen. Kirimkan saran atau laporkan bug melalui kanal terbuka kami.
               </p>
             </div>
             <div className="flex min-w-[240px] flex-col gap-3">
@@ -315,7 +315,7 @@ export default function AboutPage() {
           </div>
           <ul className="list-disc space-y-2 pl-5 font-body text-sm leading-relaxed text-[#4E7390]">
             <li>
-              Tools berjalan 100% di browser: dokumen dan input tidak dikirim atau disimpan ke server Cademy.
+              Alat berjalan 100% di browser: dokumen dan input tidak dikirim atau disimpan ke server Cademy.
             </li>
             <li>
               Tanpa akun dan tanpa pelacakan iklan; progres hanya tersimpan di localStorage perangkatmu.

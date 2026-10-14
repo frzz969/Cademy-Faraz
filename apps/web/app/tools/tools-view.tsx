@@ -22,7 +22,7 @@ const badgeCls: Record<Tool["status"], string> = {
 
 const badgeLabel: Record<Tool["status"], string> = {
   available: "Tersedia",
-  external: "Eksternal",
+  external: "External",
   beta: "Beta",
   "coming-soon": "Segera Hadir",
 };

@@ -89,7 +89,7 @@ export default function PdfPage() {
   const totalPages = files.reduce((a, f) => a + (f.pages ?? 0), 0);
 
   return (
-    <ToolShell eyebrow="Hub / Alat" title="PDF Tools" description="Validasi file, hitung halaman, dan ekstrak teks sederhana — 100% di browser, tanpa upload." icon="📑" badge="Client-only" badgeTone="info">
+    <ToolShell eyebrow="Cademy / Alat" title="PDF Tools" description="Validasi file, hitung halaman, dan ekstrak teks sederhana — 100% di browser, tanpa upload." icon="📑" badge="Client-only" badgeTone="info">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel className="space-y-3 bg-white">
           <div className="flex items-center justify-between">

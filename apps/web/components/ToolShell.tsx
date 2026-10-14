@@ -17,7 +17,7 @@ function toolHref(t: Tool): { href: string; external: boolean } {
  * berdasarkan slug rute (/tools/[slug]), kecuali dimatikan via `hideNav`.
  */
 export function ToolShell({
-  eyebrow = "Hub / Alat",
+  eyebrow = "Cademy / Alat",
   title,
   description,
   icon = "school",
@@ -83,7 +83,7 @@ export function ToolShell({
       <div className="mb-4 flex items-center justify-between py-2">
         <a
           href="/tools"
-          aria-label="Kembali ke direktori tools"
+          aria-label="Kembali ke direktori alat"
           className="brutal-press inline-flex items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 py-1.5 font-label text-xs font-bold text-brand-navy shadow-[4px_4px_0px_#000000] transition-transform"
         >
           <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">arrow_back</span> Kembali
@@ -134,7 +134,7 @@ export function ToolShell({
       </section>
 
       {showNav ? (
-        <nav aria-label="Navigasi antar tools" className="mt-6 flex flex-col gap-3">
+        <nav       aria-label="Navigasi antar alat" className="mt-6 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex gap-2">
               {prev ? (
@@ -147,7 +147,7 @@ export function ToolShell({
                         ? { target: "_blank", rel: "noreferrer" }
                         : {})}
                       className="inline-flex items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-4 py-2 font-label text-xs font-bold text-brand-navy shadow-brutal transition-all hover:bg-brand-panel active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-                      aria-label={`Tool sebelumnya: ${prev.name}`}
+                      aria-label={`Alat sebelumnya: ${prev.name}`}
                     >
                       <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">arrow_back</span>
                       <span className="max-w-[140px] truncate sm:max-w-[200px]">
@@ -178,7 +178,7 @@ export function ToolShell({
                         ? { target: "_blank", rel: "noreferrer" }
                         : {})}
                       className="inline-flex items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-4 py-2 font-label text-xs font-bold text-brand-navy shadow-brutal transition-all hover:bg-brand-panel active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-                      aria-label={`Tool berikutnya: ${next.name}`}
+                      aria-label={`Alat berikutnya: ${next.name}`}
                     >
                       <span className="max-w-[140px] truncate sm:max-w-[200px]">
                         {next.name}
@@ -207,12 +207,12 @@ export function ToolShell({
 
           {relatedSlot ?? (related.length > 0 ? (
             <section
-              aria-label="Tools terkait"
+              aria-label="Alat terkait"
               className="rounded-2xl border-[3px] border-black bg-brand-panel p-4 shadow-brutal"
             >
               <h2 className="flex items-center gap-1.5 font-display text-base font-bold text-brand-navy">
                 <span aria-hidden className="material-symbols-outlined shrink-0 text-[20px] leading-none">widgets</span>
-                Tools terkait
+                Alat terkait
               </h2>
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {related.map((t) => {

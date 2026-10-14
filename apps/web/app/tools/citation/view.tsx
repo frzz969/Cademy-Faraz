@@ -224,7 +224,7 @@ export default function CitationPage() {
 
   return (
     <ToolShell
-      eyebrow="Hub / Alat"
+      eyebrow="Cademy / Alat"
       title="Citation Generator"
       description="Susun sitasi APA 7, MLA 9, Chicago, IEEE, Harvard + BibTeX. 100% client-side, tanpa server."
       icon="📑"

@@ -151,8 +151,9 @@ export default function GradePage() {
   }
 
   function resetDefault() {
+    if (!window.confirm("Atur ulang nilai penilai ke awal? Perubahan akan hilang.")) return;
     setPenilai(DEFAULT_PENILAI.map((p) => ({ ...p })));
-    showToast("Nilai penilai dikembalikan ke default!");
+    showToast("Nilai penilai dikembalikan ke awal!");
   }
 
   async function salinHasil() {
@@ -412,7 +413,7 @@ export default function GradePage() {
               onClick={resetDefault}
               className="h-11 rounded-full bg-white px-4 font-label text-xs font-bold uppercase text-black shadow-brutal ring-2 ring-black transition-all hover:bg-brand-panel active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
             >
-              <span aria-hidden className="material-symbols-outlined text-lg">refresh</span> Reset
+              <span aria-hidden className="material-symbols-outlined text-lg">refresh</span> Atur Ulang
             </button>
             <button
               type="button"

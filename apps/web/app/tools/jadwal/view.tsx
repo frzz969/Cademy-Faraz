@@ -5,8 +5,13 @@ import { ToolShell } from "../../../components/ToolShell";
 import {
   loadTasks,
   saveTasks,
+  asingBaru,
+  samaDaftar,
   bySource,
   createTask,
+  setTaskStatus,
+  pulihkanTugas,
+  buatSeriBerulang,
   taskProgress,
   pushRiwayat,
   undoTask,
@@ -19,13 +24,22 @@ import {
   type SharedTask,
   type SubTask,
   type TaskSource,
+  type FrekuensiBerulang,
+  type InfoBerulang,
 } from "../../../components/task-store";
 import {
+  cariLintasTugas,
   cocokFilterCepat,
+  entriCariSemua,
+  gridKalender,
+  kunciTanggal,
   mondayOfWeek,
+  parseTanggalISO,
   toISODate,
   tugasTerlambat,
+  type EntriCari,
   type FilterCepat,
+  type KondisiCari,
 } from "@cademy/utils";
 
 type Status = "todo" | "doing" | "done";
@@ -45,6 +59,8 @@ interface Agenda {
   tuntas: boolean;
   /** inisial penanggung jawab (avatar), mis. dosen pembimbing */
   inisial?: string;
+  /** contoh bawaan (bukan data pengguna) — mudah dihapus sekaligus */
+  contoh?: boolean;
 }
 
 export interface Tugas {
@@ -63,6 +79,13 @@ export interface Tugas {
   sumber: Sumber;
   phaseTitle?: string;
   arsip?: boolean;
+  /** seri berulang: id induk + label pola (tiap kejadian tugas sendiri). */
+  indukId?: string;
+  berulangLabel?: string;
+  /** pola seri penuh (dibawa kartu baru agar tak lepas saat simpan) */
+  berulang?: InfoBerulang;
+  /** contoh (bukan data pengguna) — tampil berlabel, mudah dihapus */
+  demo?: boolean;
   /** tetapan lama: item source roadmap tetap ditandai, tapi kini bisa diedit. */
   isRoadmap?: boolean;
 }
@@ -88,6 +111,19 @@ function keTugas(t: SharedTask, sumber: Sumber): Tugas {
     sumber,
     ...(t.phaseTitle ? { phaseTitle: t.phaseTitle } : {}),
     ...(t.arsip ? { arsip: true } : {}),
+    ...(t.demo ? { demo: true } : {}),
+    ...(t.berulang
+      ? {
+          indukId: t.berulang.indukId,
+          berulang: t.berulang,
+          berulangLabel:
+            t.berulang.frekuensi === "harian"
+              ? "Harian"
+              : t.berulang.frekuensi === "mingguan"
+                ? "Mingguan"
+                : `Tiap ${t.berulang.intervalHari} hari`,
+        }
+      : {}),
     ...(sumber === "roadmap" ? { isRoadmap: true } : {}),
   };
 }
@@ -142,22 +178,44 @@ export function susunSimpanJadwal(
 
   const jadwalSlice: SharedTask[] = tugas
     .filter((t) => sumberTulis.has(t.sumber as TaskSource) && !idsAsing.has(t.id))
-    .map((t) => ({
-      id: t.id,
-      source: t.sumber as TaskSource,
-      status: t.status,
-      prioritas: t.prioritas,
-      title: t.judul,
-      description: t.deskripsi,
-      dueDate: t.deadline,
-      tag: t.tag,
-      progres: t.progres,
-      catatan: t.catatan,
-      notes: t.notes || undefined,
-      subtasks: t.subtasks.length > 0 ? t.subtasks : undefined,
-      createdAt:
-        all.find((a) => a.id === t.id)?.createdAt ?? new Date().toISOString(),
-    }));
+    .map((t) => {
+      const asal = all.find((a) => a.id === t.id);
+      return {
+        id: t.id,
+        source: t.sumber as TaskSource,
+        status: t.status,
+        prioritas: t.prioritas,
+        title: t.judul,
+        description: t.deskripsi,
+        dueDate: t.deadline,
+        tag: t.tag,
+        progres: t.progres,
+        catatan: t.catatan,
+        notes: t.notes || undefined,
+        subtasks: t.subtasks.length > 0 ? t.subtasks : undefined,
+        // Kartu menang atas asal untuk flag aksi (arsip/demo dariklik di
+        // papan); asal hanya warisan bila kartu tak menyebut (undefined).
+        // Tanpa ini arsip/demo hasil klik hilang pada simpanan berikutnya.
+        ...(t.arsip === true || (t.arsip === undefined && asal?.arsip)
+          ? { arsip: true as const }
+          : {}),
+        ...(t.status === "done"
+          ? { completedAt: asal?.completedAt ?? new Date().toISOString() }
+          : {}),
+        // Tautan seri berulang: kartu menang (seri baru hidup di state),
+        // asal hanya warisan. Tanpa ini kejadian lepas dari induknya
+        // pada simpanan pertama setelah seri dibuat.
+        ...(t.berulang ?? asal?.berulang
+          ? { berulang: (t.berulang ?? asal?.berulang) as InfoBerulang }
+          : {}),
+        // Flag contoh dipertahankan (kalau tidak, contoh jadi tak terbedakan
+        // dari data pengguna setiap papan disimpan).
+        ...(t.demo === true || (t.demo === undefined && asal?.demo)
+          ? { demo: true as const }
+          : {}),
+        createdAt: asal?.createdAt ?? new Date().toISOString(),
+      };
+    });
 
   // Sinkronkan field yang diubah dari papan untuk sumber bersama (roadmap/materi),
   // source dan id tetap milik aslinya.
@@ -176,6 +234,11 @@ export function susunSimpanJadwal(
         progres: t.progres,
         notes: t.notes || undefined,
         subtasks: t.subtasks.length > 0 ? t.subtasks : undefined,
+        // Arsip dari kartu (klik di papan) menang atas store; false eksplisit
+        // memulihkan, undefined mewarisi asal.
+        ...(t.arsip === true || (t.arsip === undefined && orig.arsip)
+          ? { arsip: true as const }
+          : { arsip: undefined }),
       };
     });
 
@@ -190,6 +253,91 @@ export function susunSimpanJadwal(
 /** Gabungan semua item yang tampil di papan (untuk state React). */
 export function semuaTampil(part: ReturnType<typeof bagiTampilJadwal>): Tugas[] {
   return [...part.own, ...part.pribadi, ...part.roadmap, ...part.materi];
+}
+
+/**
+ * Papan kosong = papan bersih (tak ada seed otomatis). Contoh hanya masuk
+ * lewat tombol "Coba contoh" — berflag demo, berlabel di UI, dan terpisah
+ * dari data pengguna (hapus contoh tak menyentuh record non-demo).
+ */
+export function pilihTugasAwal(tampil: Tugas[]): Tugas[] {
+  return tampil;
+}
+
+/** Ada kartu contoh di papan? */
+export function adaContoh(list: Tugas[]): boolean {
+  return list.some((t) => t.demo === true);
+}
+
+/** Buang kartu contoh saja — data pengguna utuh. */
+export function hapusContoh(list: Tugas[]): Tugas[] {
+  return list.filter((t) => t.demo !== true);
+}
+
+/**
+ * Contoh untuk dicoba (salinan baru tiap panggil — tenggat relatif ke hari
+ * ini, bukan memori modul basi). ID stabil awalan "contoh-" supaya mudah
+ * dikenali dan tak menabrak ID data pengguna (awalan sumber + acak).
+ */
+export function tugasContoh(): Tugas[] {
+  const kini = new Date();
+  return [
+    tugasDasar({
+      id: "contoh-erd",
+      judul: "Perbaiki diagram relasi ERD sesuai modul MySQL 8",
+      tag: "BAB 3",
+      prioritas: "tinggi",
+      deadline: "Besok",
+      demo: true,
+    }),
+    tugasDasar({
+      id: "contoh-lampiran",
+      judul: "Format tata letak lampiran kuesioner Google Form",
+      tag: "LAMPIRAN",
+      prioritas: "normal",
+      deadline: fmtSingkat(geserHari(kini, 4)),
+      demo: true,
+    }),
+    tugasDasar({
+      id: "contoh-paper",
+      judul: "Review 3 paper IEEE tentang transformer NLP",
+      tag: "LITERATUR",
+      prioritas: "normal",
+      deadline: fmtSingkat(geserHari(kini, 6)),
+      demo: true,
+    }),
+    tugasDasar({
+      id: "contoh-matriks",
+      judul: "Matriks revisi tanggapan komentar Dosen Penguji 1",
+      tag: "REVISI SEMHAS",
+      prioritas: "sedang",
+      status: "doing",
+      deadline: fmtSingkat(geserHari(kini, 2)),
+      progres: 75,
+      catatan: 4,
+      demo: true,
+    }),
+    tugasDasar({
+      id: "contoh-ba",
+      judul: "Tanda tangan Berita Acara Pelaksanaan Seminar",
+      tag: "ADMINISTRASI",
+      prioritas: "normal",
+      status: "done",
+      deadline: `Tuntas ${fmtSingkat(geserHari(kini, -2))}`,
+      progres: 100,
+      demo: true,
+    }),
+    tugasDasar({
+      id: "contoh-cetak",
+      judul: "Cetak draft naskah sidang jilid lakban 3 eksemplar",
+      tag: "LOGISTIK",
+      prioritas: "normal",
+      status: "done",
+      deadline: `Tuntas ${fmtSingkat(geserHari(kini, -4))}`,
+      progres: 100,
+      demo: true,
+    }),
+  ];
 }
 
 const KEY_TUGAS = "cademy:jadwal-tugas";
@@ -253,10 +401,11 @@ const DEFAULT_AGENDA: Agenda[] = [
     lokasi: "R. Dosen 302",
     inisial: "SD",
     tuntas: false,
+    contoh: true,
   },
   {
     id: "ag-revisi",
-    judul: "Deadline Revisi Naskah Semhas",
+    judul: "Tenggat Revisi Naskah Semhas",
     deskripsi:
       "Upload PDF final beserta bukti persetujuan tanda tangan kaprodi ke portal SIAKAD.",
     prioritas: "sedang",
@@ -267,6 +416,7 @@ const DEFAULT_AGENDA: Agenda[] = [
     lokasi: "Portal Akademik",
     inisial: "SA",
     tuntas: false,
+    contoh: true,
   },
   {
     id: "ag-gladi",
@@ -281,6 +431,7 @@ const DEFAULT_AGENDA: Agenda[] = [
     lokasi: "Teman Sejawat",
     inisial: "DN",
     tuntas: false,
+    contoh: true,
   },
 ];
 
@@ -300,58 +451,7 @@ function tugasDasar(t: Partial<Tugas> & Pick<Tugas, "id" | "judul">): Tugas {
   };
 }
 
-const _KINI = new Date();
-const DEFAULT_TUGAS: Tugas[] = [
-  tugasDasar({
-    id: "t-erd",
-    judul: "Perbaiki diagram relasi ERD sesuai modul MySQL 8",
-    tag: "BAB 3",
-    prioritas: "tinggi",
-    deadline: "Besok",
-  }),
-  tugasDasar({
-    id: "t-lampiran",
-    judul: "Format tata letak lampiran kuesioner Google Form",
-    tag: "LAMPIRAN",
-    prioritas: "normal",
-    deadline: fmtSingkat(geserHari(_KINI, 4)),
-  }),
-  tugasDasar({
-    id: "t-paper",
-    judul: "Review 3 paper IEEE tentang transformer NLP",
-    tag: "LITERATUR",
-    prioritas: "normal",
-    deadline: fmtSingkat(geserHari(_KINI, 6)),
-  }),
-  tugasDasar({
-    id: "t-matriks",
-    judul: "Matriks revisi tanggapan komentar Dosen Penguji 1",
-    tag: "REVISI SEMHAS",
-    prioritas: "sedang",
-    status: "doing",
-    deadline: fmtSingkat(geserHari(_KINI, 2)),
-    progres: 75,
-    catatan: 4,
-  }),
-  tugasDasar({
-    id: "t-ba",
-    judul: "Tanda tangan Berita Acara Pelaksanaan Seminar",
-    tag: "ADMINISTRASI",
-    prioritas: "normal",
-    status: "done",
-    deadline: `Tuntas ${fmtSingkat(geserHari(_KINI, -2))}`,
-    progres: 100,
-  }),
-  tugasDasar({
-    id: "t-cetak",
-    judul: "Cetak draft naskah sidang jilid lakban 3 eksemplar",
-    tag: "LOGISTIK",
-    prioritas: "normal",
-    status: "done",
-    deadline: `Tuntas ${fmtSingkat(geserHari(_KINI, -4))}`,
-    progres: 100,
-  }),
-];
+const DEFAULT_TUGAS: Tugas[] = tugasContoh();
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -393,7 +493,7 @@ function badgeAgenda(tone: Agenda["badgeTone"]): string {
 
 const URUTAN: Status[] = ["todo", "doing", "done"];
 const LABEL_STATUS: Record<Status, string> = {
-  todo: "To Do",
+  todo: "Belum Dikerjakan",
   doing: "Sedang Dikerjakan",
   done: "Selesai",
 };
@@ -411,6 +511,9 @@ export default function JadwalView() {
   const [prioritas, setPrioritas] = React.useState<Prioritas>("sedang");
   const [deadline, setDeadline] = React.useState("");
   const [statusBaru, setStatusBaru] = React.useState<Status>("todo");
+  const [ulang, setUlang] = React.useState<"tidak" | FrekuensiBerulang>("tidak");
+  const [ulangInterval, setUlangInterval] = React.useState("3");
+  const [ulangJumlah, setUlangJumlah] = React.useState("5");
   const [toast, setToast] = React.useState<string | null>(null);
   const [siap, setSiap] = React.useState(false);
   const [undoTersedia, setUndoTersedia] = React.useState(false);
@@ -419,17 +522,32 @@ export default function JadwalView() {
   const [subJudul, setSubJudul] = React.useState("");
   const [editId, setEditId] = React.useState<string | null>(null);
   const [konfirmasiHapus, setKonfirmasiHapus] = React.useState<string | null>(null);
+  const [ccQ, setCcQ] = React.useState("");
+  const [ccKondisi, setCcKondisi] = React.useState<KondisiCari>("semua");
+  const [blnTahun, setBlnTahun] = React.useState(() => {
+    const k = new Date();
+    return { tahun: k.getFullYear(), bulan: k.getMonth() };
+  });
+  const [tglPilih, setTglPilih] = React.useState<string | null>(null);
   const fileImporRef = React.useRef<HTMLInputElement>(null);
   const toastTimer = React.useRef<number | null>(null);
+  // ID yang pernah dikenal tab ini (mount + tiap tulis/baca segar).
+  // Bedakan "dihapus pengguna" (dikenal, boleh hilang) dari "ditambah tab
+  // lain" (asing, wajib dipertahankan) saat slice ditulis ulang utuh.
+  const dikenalRef = React.useRef<Set<string>>(new Set());
   const firstInputRef = React.useRef<HTMLInputElement>(null);
   const dialogRef = React.useRef<HTMLFormElement>(null);
   const pemicuRef = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {
     setAgenda(load<Agenda[]>(KEY_AGENDA, DEFAULT_AGENDA));
-    const part = bagiTampilJadwal(loadTasks());
-    const tampil = semuaTampil(part);
-    setTugas(tampil.length > 0 ? tampil : DEFAULT_TUGAS);
+    // Papan bersih default: tak ada seed otomatis. Contoh hanya lewat
+    // tombol "Coba contoh" (berflag demo, terpisah dari data pengguna).
+    const segar = loadTasks();
+    const part = bagiTampilJadwal(segar);
+    const tampil = pilihTugasAwal(semuaTampil(part));
+    setTugas(tampil);
+    dikenalRef.current = new Set(segar.map((t) => t.id));
     setSiap(true);
   }, []);
 
@@ -439,13 +557,50 @@ export default function JadwalView() {
       const all = loadTasks();
       // Jadwal menulis slice jadwal+pribadi dan menyinkronkan perubahan
       // roadmap/materi yang tampil di papan (satu sumber kebenaran).
+      // Record asing (ditambah tab lain, belum dikenal) ikut dibawa agar
+      // tulis-ulang dari state tak membuangnya.
       const { keep, jadwalSlice, sinkronSlice } = susunSimpanJadwal(all, tugas);
-      saveTasks([...keep, ...jadwalSlice, ...sinkronSlice]);
-      localStorage.setItem(KEY_TUGAS, JSON.stringify(jadwalSlice));
+      const asing = asingBaru(all, dikenalRef.current).filter(
+        (t) => t.source === "jadwal" || t.source === "pribadi"
+      );
+      const tulis = [...keep, ...jadwalSlice, ...sinkronSlice, ...asing];
+      // Lewati tulis bila sama (anti gema lintas-tab: tulis = event =
+      // refresh = tulis lagi, tanpa henti).
+      if (!samaDaftar(tulis, all)) {
+        saveTasks(tulis);
+        localStorage.setItem(KEY_TUGAS, JSON.stringify(jadwalSlice));
+      }
+      tulis.forEach((t) => dikenalRef.current.add(t.id));
     } catch {
       /* abaikan */
     }
   }, [tugas, siap]);
+
+  // Segarkan papan saat tab kembali fokus / storage berubah (pola sama
+  // seperti planner): suntingan tab lain tak lagi tertimpa kartu basi.
+  React.useEffect(() => {
+    if (!siap) return;
+    function segar() {
+      try {
+        const segarTasks = loadTasks();
+        // Kembalikan prev bila sama: React batal render → efek simpan tak
+        // ikut menyala → gema lintas-tab berhenti setelah konvergen.
+        setTugas((dulu) => {
+          const jadi = semuaTampil(bagiTampilJadwal(segarTasks));
+          return JSON.stringify(jadi) === JSON.stringify(dulu) ? dulu : jadi;
+        });
+        segarTasks.forEach((t) => dikenalRef.current.add(t.id));
+      } catch {
+        /* abaikan */
+      }
+    }
+    window.addEventListener("focus", segar);
+    window.addEventListener("storage", segar);
+    return () => {
+      window.removeEventListener("focus", segar);
+      window.removeEventListener("storage", segar);
+    };
+  }, [siap]);
 
   React.useEffect(() => {
     if (!siap) return;
@@ -508,13 +663,20 @@ export default function JadwalView() {
     };
   }, [formTerbuka]);
 
-  const todo = tugas.filter((t) => t.status === "todo").length;
-  const doing = tugas.filter((t) => t.status === "doing").length;
-  const done = tugas.filter((t) => t.status === "done").length;
-  const terlambat = tugas.filter((t) =>
+  // Arsip disembunyikan dari papan & statistik (hanya di seksi Arsip).
+  const aktif = tugas.filter((t) => !t.arsip);
+  const arsip = tugas.filter((t) => t.arsip);
+  // Contoh tampil berlabel di papan; progres % hanya datamu
+  // (contoh tak dihitung — terpisah dari data pengguna).
+  const milikku = aktif.filter((t) => !t.demo);
+  const adaDemo = adaContoh(tugas);
+  const todo = aktif.filter((t) => t.status === "todo").length;
+  const doing = aktif.filter((t) => t.status === "doing").length;
+  const done = aktif.filter((t) => t.status === "done").length;
+  const terlambat = aktif.filter((t) =>
     tugasTerlambat(t.status, t.deadline)
   ).length;
-  const persen = tugas.length === 0 ? 0 : Math.round((done / tugas.length) * 100);
+  const persen = milikku.length === 0 ? 0 : Math.round((milikku.filter((t) => t.status === "done").length / milikku.length) * 100);
 
   const cocokFilter = React.useCallback(
     (t: Tugas): boolean =>
@@ -531,6 +693,54 @@ export default function JadwalView() {
       ),
     [filter, cari]
   );
+
+  // Cari Semua Tugas: baca store bersama apa adanya (semua sumber, arsip
+  // ikut hanya bila kondisi arsip). Hasil menunjuk record yang sama.
+  const hasilCari: EntriCari[] = React.useMemo(() => {
+    if (!siap) return [];
+    try {
+      return cariLintasTugas(entriCariSemua(loadTasks()), {
+        q: ccQ,
+        kondisi: ccKondisi,
+      });
+    } catch {
+      return [];
+    }
+  }, [siap, tugas, ccQ, ccKondisi]);
+
+  function resetCari(): void {
+    setCcQ("");
+    setCcKondisi("semua");
+  }
+
+  // Kalender bulanan: kisi Senin–Minggu murni (waktu lokal, tanpa UTC).
+  // Hanya tenggat ISO yang cocok yang dihitung — tanpa-tenggat tak dipalsukan.
+  const kalenderSel = React.useMemo(
+    () => gridKalender(blnTahun.tahun, blnTahun.bulan),
+    [blnTahun]
+  );
+  const namaBulan = new Date(blnTahun.tahun, blnTahun.bulan, 1).toLocaleDateString(
+    "id-ID",
+    { month: "long", year: "numeric" }
+  );
+  const isoHariIni = toISODate(new Date());
+
+  function geserBulan(delta: number): void {
+    setBlnTahun((b) => {
+      const d = new Date(b.tahun, b.bulan + delta, 1);
+      return { tahun: d.getFullYear(), bulan: d.getMonth() };
+    });
+  }
+
+  function keHariIni(): void {
+    const k = new Date();
+    setBlnTahun({ tahun: k.getFullYear(), bulan: k.getMonth() });
+    setTglPilih(toISODate(k));
+  }
+
+  const tugasTglPilih = tglPilih
+    ? aktif.filter((t) => parseTanggalISO(t.deadline) === tglPilih)
+    : [];
 
   const agendaTampil = agenda.filter((a) =>
     cocokFilterCepat(
@@ -600,7 +810,77 @@ export default function JadwalView() {
     catatUndo("hapus tugas");
     setTugas((list) => list.filter((t) => t.id !== id));
     setKonfirmasiHapus(null);
-    tampilToast("Tugas dihapus — bisa dibatalkan dengan Undo!");
+    tampilToast("Tugas dihapus — bisa dibatalkan dengan Urungkan!");
+  }
+
+  function tandaiArsip(list: Tugas[], id: string, nilai: boolean): Tugas[] {
+    return list.map((t) => (t.id === id ? { ...t, arsip: nilai } : t));
+  }
+
+  function arsipkan(id: string): void {
+    catatUndo("arsipkan tugas");
+    setTugas((list) => tandaiArsip(list, id, true));
+    tampilToast("Tugas diarsipkan — lihat seksi Arsip untuk memulihkan!");
+  }
+
+  function pulihkanArsip(id: string): void {
+    catatUndo("pulihkan arsip");
+    setTugas((list) => tandaiArsip(list, id, false));
+    tampilToast("Tugas dikembalikan ke papan!");
+  }
+
+  function hapusPermanenArsip(id: string): void {
+    const target = tugas.find((t) => t.id === id);
+    if (
+      !window.confirm(
+        `Hapus permanen "${target?.judul ?? "tugas ini"}" dari Arsip? Tindakan ini tidak bisa dibatalkan.`
+      )
+    )
+      return;
+    catatUndo("hapus permanen");
+    setTugas((list) => list.filter((t) => t.id !== id));
+    tampilToast("Tugas dihapus permanen dari Arsip.");
+  }
+
+  // Aksi hasil Cari Semua Tugas: tulis langsung ke store bersama (sama
+  // record, tanpa salinan), lalu segarkan papan.
+  function segarkanDariStore(): void {
+    try {
+      const segar = loadTasks();
+      setTugas((dulu) => {
+        const jadi = semuaTampil(bagiTampilJadwal(segar));
+        return JSON.stringify(jadi) === JSON.stringify(dulu) ? dulu : jadi;
+      });
+      segar.forEach((t) => dikenalRef.current.add(t.id));
+    } catch {
+      /* abaikan */
+    }
+  }
+
+  function geserHasilLintas(id: string, arah: -1 | 1): void {
+    catatUndo("geser status tugas");
+    try {
+      const all = loadTasks();
+      const cur = all.find((t) => t.id === id);
+      if (!cur || cur.arsip) return;
+      const next = URUTAN[Math.min(2, Math.max(0, URUTAN.indexOf(cur.status) + arah))];
+      saveTasks(setTaskStatus(all, id, next));
+      segarkanDariStore();
+      tampilToast(arah > 0 ? "Kartu digeser maju satu kolom!" : "Kartu dikembalikan!");
+    } catch {
+      /* abaikan */
+    }
+  }
+
+  function pulihkanHasilLintas(id: string): void {
+    catatUndo("pulihkan arsip");
+    try {
+      saveTasks(pulihkanTugas(loadTasks(), id));
+      segarkanDariStore();
+      tampilToast("Tugas dikembalikan ke papan!");
+    } catch {
+      /* abaikan */
+    }
   }
 
   function ubahProgres(id: string, nilai: number): void {
@@ -670,6 +950,7 @@ export default function JadwalView() {
     const tampil = semuaTampil(bagiTampilJadwal(kembali));
     setTugas(tampil);
     saveTasks(kembali);
+    dikenalRef.current = new Set(kembali.map((t) => t.id));
     setUndoTersedia(bisaUndo());
     setUndoLabel(labelUndo());
     tampilToast("Aksi terakhir dibatalkan.");
@@ -701,6 +982,7 @@ export default function JadwalView() {
     const digabung = gabungCadangan(aktif, hasil.tasks, "gabung");
     saveTasks(digabung);
     setTugas(semuaTampil(bagiTampilJadwal(digabung)));
+    dikenalRef.current = new Set(digabung.map((t) => t.id));
     tampilToast(`${hasil.total} tugas dari file diterapkan (data lama aman).`);
   }
 
@@ -709,6 +991,10 @@ export default function JadwalView() {
     const nama = judul.trim();
     if (!nama) {
       tampilToast("Isi judul tugas terlebih dahulu!");
+      return;
+    }
+    if (ulang !== "tidak") {
+      tambahSeri(nama);
       return;
     }
     const baru = createTask({
@@ -729,16 +1015,123 @@ export default function JadwalView() {
       },
       ...list,
     ]);
+    tutupFormTambah();
+    tampilToast(
+      statusBaru === "todo"
+        ? "Tugas baru masuk kolom Belum Dikerjakan!"
+        : `Tugas baru masuk kolom ${LABEL_STATUS[statusBaru]}!`
+    );
+  }
+
+  function tutupFormTambah(): void {
     setJudul("");
     setDeskripsi("");
     setDeadline("");
     setFormTerbuka(false);
     setStatusBaru("todo");
-    tampilToast(
-      statusBaru === "todo"
-        ? "Tugas baru masuk kolom To Do!"
-        : `Tugas baru masuk kolom ${LABEL_STATUS[statusBaru]}!`
-    );
+    setUlang("tidak");
+    setUlangInterval("3");
+    setUlangJumlah("5");
+  }
+
+  // Tugas berulang: validasi jujur, tiap kejadian tugas sendiri.
+  // Mulai = tenggat yang dipilih (wajib). Tanpa scheduler: kejadian
+  // di-materialisasi di depan (maks 31 termasuk induk).
+  function tambahSeri(nama: string): void {
+    if (ulang === "tidak") return;
+    const mulai = deadline.trim();
+    if (!mulai) {
+      tampilToast("Pilih tenggat dulu sebagai tanggal mulai seri!");
+      return;
+    }
+    const jumlah = Math.floor(Number(ulangJumlah));
+    if (!Number.isInteger(jumlah) || jumlah < 2 || jumlah > 31) {
+      tampilToast("Jumlah kejadian harus 2–31!");
+      return;
+    }
+    let intervalHari: number | undefined;
+    if (ulang === "interval") {
+      intervalHari = Math.floor(Number(ulangInterval));
+      if (!Number.isInteger(intervalHari) || intervalHari < 1 || intervalHari > 365) {
+        tampilToast("Interval harus bilangan bulat 1–365 hari!");
+        return;
+      }
+    }
+    const hasil = buatSeriBerulang({
+      source: "jadwal",
+      title: nama,
+      description: deskripsi.trim(),
+      tag: tag.trim().toUpperCase().slice(0, 16) || "UMUM",
+      prioritas,
+      frekuensi: ulang,
+      ...(intervalHari !== undefined ? { intervalHari } : {}),
+      mulai,
+      jumlah,
+    });
+    if (!hasil.ok) {
+      tampilToast(hasil.galat);
+      return;
+    }
+    const kartu: Tugas[] = hasil.tugas.map((t) => ({
+      ...keTugas(t, "jadwal"),
+      progres: taskProgress(t),
+      catatan: 0,
+    }));
+    setTugas((list) => [...kartu, ...list]);
+    tutupFormTambah();
+    tampilToast(`Seri berulang dibuat: ${kartu.length} kejadian, tiap tugas sendiri!`);
+  }
+
+  function hapusSeriTugas(indukId: string, judulSeri: string): void {
+    if (
+      !window.confirm(
+        `Hapus 1 seri utuh "${judulSeri}" (semua kejadiannya)? Tindakan ini tidak bisa dibatalkan.`
+      )
+    )
+      return;
+    catatUndo("hapus seri berulang");
+    setTugas((list) => list.filter((t) => t.id !== indukId && t.indukId !== indukId));
+    tampilToast("Seri berulang dihapus — bisa dibatalkan dengan Urungkan!");
+  }
+
+  // Contoh: opt-in eksplisit, berflag demo, hapus tak sentuh data asli.
+  // Anti-ganda: klik "Coba contoh" berulang tak menumpuk kartu.
+  function muatContoh(): void {
+    if (adaContoh(tugas)) {
+      tampilToast("Contoh sudah ada di papan!");
+      return;
+    }
+    catatUndo("muat contoh");
+    setTugas((list) => (adaContoh(list) ? list : [...tugasContoh(), ...list]));
+    tampilToast("Contoh dimuat — berlabel Demo, bebas diubah/dihapus!");
+  }
+
+  function hapusSemuaContoh(): void {
+    const n = tugas.filter((t) => t.demo).length;
+    if (n === 0) return;
+    if (
+      !window.confirm(
+        `Hapus ${n} kartu contoh (Demo)? Datamu yang asli tidak ikut terhapus.`
+      )
+    )
+      return;
+    catatUndo("hapus contoh");
+    setTugas((list) => hapusContoh(list));
+    setAgenda((list) => list.filter((a) => !a.contoh));
+    tampilToast("Contoh dihapus — datamu utuh.");
+  }
+
+  function hapusSemuaArsip(): void {    const n = arsip.length;
+    if (n === 0) return;
+    if (
+      !window.confirm(
+        `Hapus permanen ${n} tugas dari Arsip? Tindakan ini tidak bisa dibatalkan.`
+      )
+    )
+      return;
+    catatUndo("kosongkan arsip");
+    setTugas((list) => list.filter((t) => !t.arsip));
+    tampilToast("Arsip dikosongkan.");
   }
 
   async function salinUndangan(): Promise<void> {
@@ -792,9 +1185,25 @@ export default function JadwalView() {
               Terlambat
             </span>
           )}
+          {t.berulangLabel && (
+            <span
+              title="Tugas berulang — tiap kejadian tugas sendiri"
+              className="shrink-0 rounded-full border-2 border-black bg-brand-yellow px-2 py-0.5 font-label text-[10px] font-extrabold uppercase tracking-wider text-black"
+            >
+              🔁 {t.berulangLabel}
+            </span>
+          )}
           <span className="shrink-0 rounded-full border-[3px] border-black bg-brand-panel px-2 py-0.5 font-label text-[10px] font-extrabold uppercase tracking-wider text-brand-navy shadow-[2px_2px_0px_#000000]">
             {t.sumber === "roadmap" ? "Roadmap" : t.sumber === "materi" ? "Materi" : t.sumber === "pribadi" ? "Pribadi" : "Jadwal"}
           </span>
+          {t.demo && (
+            <span
+              title="Data contoh — bukan datamu. Hapus sekaligus dari banner Demo."
+              className="shrink-0 rounded-full border-2 border-dashed border-black bg-white px-2 py-0.5 font-label text-[10px] font-extrabold uppercase tracking-wider text-brand-muted"
+            >
+              Demo
+            </span>
+          )}
           {t.status === "done" ? (
             <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none text-brand-blue">
               verified
@@ -835,7 +1244,7 @@ export default function JadwalView() {
             />
           </label>
           <label className="block">
-            <span className="mb-1 block font-label text-[11px] font-extrabold uppercase text-brand-navy">Deadline</span>
+            <span className="mb-1 block font-label text-[11px] font-extrabold uppercase text-brand-navy">Tenggat</span>
             <input
               type="date"
               value={/^\d{4}-\d{2}-\d{2}/.test(t.deadline) ? t.deadline.slice(0, 10) : ""}
@@ -843,7 +1252,7 @@ export default function JadwalView() {
                 ubahField(t.id, { deadline: e.target.value })
               }
               className="h-10 w-full rounded-lg border-2 border-black bg-white px-2 font-body text-sm text-brand-navy outline-none focus:bg-brand-paper"
-              aria-label={`Deadline ${t.judul}`}
+              aria-label={`Tenggat ${t.judul}`}
             />
           </label>
           <div className="flex flex-wrap gap-2">
@@ -1090,6 +1499,16 @@ export default function JadwalView() {
         </button>
         <button
           type="button"
+          onClick={() => arsipkan(t.id)}
+          aria-label={`Arsipkan: ${t.judul}`}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-black bg-white text-brand-navy shadow-[2px_2px_0px_#000000] transition-all hover:bg-brand-panel active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+        >
+          <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">
+            archive
+          </span>
+        </button>
+        <button
+          type="button"
           onClick={() => setKonfirmasiHapus(t.id)}
           aria-label={`Hapus: ${t.judul}`}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-black bg-brand-brick text-white shadow-[2px_2px_0px_#000000] transition-all hover:brightness-110 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
@@ -1099,6 +1518,15 @@ export default function JadwalView() {
           </span>
         </button>
       </div>
+      )}
+      {t.indukId && (
+        <button
+          type="button"
+          onClick={() => t.indukId && hapusSeriTugas(t.indukId, t.judul)}
+          className="h-10 w-full rounded-full border-2 border-black bg-white font-label text-[11px] font-extrabold uppercase text-brand-brick"
+        >
+          Hapus 1 seri utuh ({t.berulangLabel ?? "berulang"})
+        </button>
       )}
       {t.status === "done" && (
         <div className="flex flex-wrap items-center gap-1.5 border-t-2 border-black/10 pt-2">
@@ -1126,6 +1554,14 @@ export default function JadwalView() {
           </button>
           <button
             type="button"
+            onClick={() => arsipkan(t.id)}
+            aria-label={`Arsipkan: ${t.judul}`}
+            className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-black bg-white text-brand-navy"
+          >
+            <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">archive</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setKonfirmasiHapus(t.id)}
             aria-label={`Hapus: ${t.judul}`}
             className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-black bg-brand-brick text-white"
@@ -1150,7 +1586,7 @@ export default function JadwalView() {
     <ToolShell
       eyebrow="Alat Studi"
       title="Jadwal & Task Board"
-      description="Manajemen timeline bimbingan, deadline sidang, dan pelacak tugas skripsi secara terintegrasi."
+      description="Manajemen linimasa bimbingan, tenggat sidang, dan pelacak tugas skripsi secara terintegrasi."
       icon="calendar_month"
       badge="Kanban Aktif"
       badgeTone="beta"
@@ -1252,13 +1688,17 @@ export default function JadwalView() {
               }}
               className="shrink-0 rounded-full border-2 border-black bg-brand-brick px-3 py-1.5 font-label text-xs font-extrabold uppercase text-white"
             >
-              Reset filter
+              Atur Ulang
             </button>
           )}
         </div>
 
-        {/* Aksi data: undo, ekspor, impor — jujur soal lingkupnya */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Aksi data dilipat agar ringkas — fitur tetap tersedia */}
+        <details className="rounded-xl border-[3px] border-black bg-white px-3 py-2 shadow-[2px_2px_0px_#000000]">
+          <summary className="cursor-pointer font-label text-xs font-extrabold uppercase text-brand-navy">
+            Lainnya: Urungkan, Ekspor, Impor
+          </summary>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
           <button
             type="button"
             onClick={undo}
@@ -1266,7 +1706,7 @@ export default function JadwalView() {
             className="inline-flex h-10 items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 font-label text-xs font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-40"
           >
             <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">undo</span>
-            Undo{undoLabel ? `: ${undoLabel}` : ""}
+            Urungkan{undoLabel ? `: ${undoLabel}` : ""}
           </button>
           <button
             type="button"
@@ -1274,7 +1714,7 @@ export default function JadwalView() {
             className="inline-flex h-10 items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 font-label text-xs font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
           >
             <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">download</span>
-            Ekspor JSON
+            Ekspor
           </button>
           <button
             type="button"
@@ -1282,41 +1722,44 @@ export default function JadwalView() {
             className="inline-flex h-10 items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-3 font-label text-xs font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
           >
             <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">upload</span>
-            Impor JSON
+            Impor
           </button>
           <input
             ref={fileImporRef}
             type="file"
             accept="application/json,.json"
             className="hidden"
-            aria-label="Impor cadangan JSON"
+            aria-label="Impor cadangan"
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
               const file = e.target.files?.[0];
               if (file) void imporData(file);
               e.target.value = "";
             }}
           />
-        </div>
+          </div>
+        </details>
 
-        {/* Ringkasan statistik dari data aktual */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {[
-            ["To Do", todo],
-            ["Dikerjakan", doing],
-            ["Selesai", done],
-            ["Terlambat", terlambat],
-          ].map(([label, n]) => (
-            <div
-              key={String(label)}
-              className="rounded-xl border-[3px] border-black bg-white p-3 shadow-brutal-sm"
+        {/* Ringkasan statistik satu baris ringkas */}
+        <p aria-live="polite" className="rounded-xl border-[3px] border-black bg-white px-3 py-2 font-label text-xs font-bold text-brand-navy shadow-brutal-sm">
+          Belum Dikerjakan {todo} • Dikerjakan {doing} • Selesai {done} • Terlambat {terlambat}
+        </p>
+        <p className="font-body text-[11px] text-brand-muted">
+          Progres {persen}% dihitung dari tugasmu (kartu Demo tak ikut).
+        </p>
+        {adaDemo && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border-[3px] border-dashed border-black bg-brand-yellow/20 px-3 py-2">
+            <p className="font-body text-xs text-brand-navy">
+              <strong>Mode contoh:</strong> kartu berlabel Demo bukan datamu — bebas diubah/dihapus.
+            </p>
+            <button
+              type="button"
+              onClick={hapusSemuaContoh}
+              className="h-10 rounded-full border-2 border-black bg-white px-3 font-label text-[11px] font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000]"
             >
-              <p className="font-label text-[11px] font-extrabold uppercase text-brand-muted">
-                {label}
-              </p>
-              <p className="font-display text-2xl font-extrabold text-brand-blue">{n}</p>
-            </div>
-          ))}
-        </div>
+              Hapus contoh
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Satu kolom vertikal: kalender → agenda → kanban → tim → form */}
@@ -1367,6 +1810,126 @@ export default function JadwalView() {
             </div>
           </div>
 
+          {/* Kalender Bulanan — melengkapi strip pekan, bukan mengganti */}
+          <section aria-label="Kalender bulanan" className="rounded-2xl border-[3px] border-black bg-white p-3.5 shadow-brutal">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => geserBulan(-1)}
+                  aria-label="Bulan sebelumnya"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-black bg-white text-brand-navy shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                >
+                  <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">chevron_left</span>
+                </button>
+                <h2 className="min-w-[140px] text-center font-display text-base font-bold capitalize text-brand-navy">
+                  {namaBulan}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => geserBulan(1)}
+                  aria-label="Bulan berikutnya"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-black bg-white text-brand-navy shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                >
+                  <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">chevron_right</span>
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={keHariIni}
+                className="rounded-full border-2 border-black bg-brand-panel px-3 py-1.5 font-label text-[11px] font-extrabold uppercase text-brand-navy shadow-[2px_2px_0px_#000000]"
+              >
+                Hari ini
+              </button>
+            </div>
+            <div className="mt-2 grid grid-cols-7 gap-1" role="grid" aria-label={`Kalender ${namaBulan}`}>
+              {["SEN", "SEL", "RAB", "KAM", "JUM", "SAB", "MIN"].map((h) => (
+                <span key={h} className="py-1 text-center font-label text-[10px] font-extrabold text-brand-muted">
+                  {h}
+                </span>
+              ))}
+              {kalenderSel.map((d) => {
+                const iso = kunciTanggal(d);
+                const diBulan = d.getMonth() === blnTahun.bulan;
+                const daftar = aktif.filter((t) => parseTanggalISO(t.deadline) === iso);
+                const adaTerlambat = daftar.some((t) => tugasTerlambat(t.status, t.deadline));
+                const dipilih = tglPilih === iso;
+                const hariIni = iso === isoHariIni;
+                return (
+                  <button
+                    key={iso}
+                    type="button"
+                    role="gridcell"
+                    onClick={() => setTglPilih((s) => (s === iso ? null : iso))}
+                    aria-pressed={dipilih}
+                    aria-label={`${d.getDate()} ${namaBulan}${daftar.length > 0 ? `, ${daftar.length} tugas` : ""}${adaTerlambat ? ", ada terlambat" : ""}`}
+                    className={`flex min-h-[44px] flex-col items-center justify-center rounded-xl border-2 px-0.5 py-1 transition-all active:translate-y-0.5 ${
+                      dipilih
+                        ? "border-black bg-brand-blue text-white shadow-[2px_2px_0px_#000000]"
+                        : hariIni
+                          ? "border-black bg-brand-yellow text-black shadow-[2px_2px_0px_#000000]"
+                          : adaTerlambat
+                            ? "border-brand-brick bg-white text-brand-navy"
+                            : "border-black/20 bg-white text-brand-navy"
+                    } ${diBulan ? "" : "opacity-40"}`}
+                  >
+                    <span className="font-display text-sm font-bold leading-none">{d.getDate()}</span>
+                    {daftar.length > 0 && (
+                      <span
+                        className={`mt-1 rounded-full px-1.5 font-label text-[10px] font-extrabold leading-4 ${
+                          dipilih ? "bg-white text-brand-navy" : adaTerlambat ? "bg-brand-brick text-white" : "bg-brand-panel text-brand-navy"
+                        }`}
+                      >
+                        {daftar.length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 font-body text-[11px] text-brand-muted">
+              Angka = tugas aktif bertenggat tanggal itu (bukan arsip). Tugas tanpa tenggat tak masuk kalender — lihat papan.
+              {terlambat > 0 ? ` Ada ${terlambat} terlambat — saring "Terlambat" di atas.` : ""}
+            </p>
+            {tglPilih && (
+              <div className="mt-2 rounded-xl border-2 border-black bg-brand-paper p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-label text-xs font-extrabold uppercase text-brand-navy">
+                    {tugasTglPilih.length} tugas • {tglPilih}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setTglPilih(null)}
+                    className="font-label text-[11px] font-bold text-brand-brick underline"
+                  >
+                    Tutup
+                  </button>
+                </div>
+                {tugasTglPilih.length === 0 ? (
+                  <p className="mt-1 font-body text-xs text-brand-muted">
+                    Tak ada tugas bertenggat tanggal ini.
+                  </p>
+                ) : (
+                  <ul className="mt-2 space-y-1.5">
+                    {tugasTglPilih.map((t) => (
+                      <li key={t.id} className="rounded-lg border-2 border-black bg-white px-2.5 py-1.5">
+                        <p className={`font-body text-sm font-bold text-brand-navy ${t.status === "done" ? "line-through opacity-70" : ""}`}>
+                          {t.judul}
+                        </p>
+                        <p className="font-body text-[11px] text-brand-muted">
+                          {t.sumber === "roadmap" ? "Roadmap" : t.sumber === "materi" ? "Materi" : t.sumber === "pribadi" ? "Pribadi" : "Jadwal"}
+                          {" • "}
+                          {t.status === "done" ? "Selesai" : t.status === "doing" ? "Dikerjakan" : "Belum Dikerjakan"}
+                          {tugasTerlambat(t.status, t.deadline) ? " • Terlambat" : ""}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </section>
+
           {/* Agenda Terdekat */}
           <div className="flex flex-col items-start justify-between gap-3 px-1 sm:flex-row sm:items-center">
             <h2 className="flex flex-wrap items-center gap-2 font-display text-xl font-bold text-brand-navy">
@@ -1393,7 +1956,7 @@ export default function JadwalView() {
 
           {agendaTampil.length === 0 && (
             <p className="rounded-xl border-2 border-dashed border-black/30 bg-white p-4 text-center font-body text-sm text-brand-muted">
-              Tak ada agenda/task yang cocok — coba ubah kata kunci atau filter prioritas.
+              Tak ada agenda/tugas yang cocok — coba ubah kata kunci atau filter prioritas.
             </p>
           )}
 
@@ -1447,6 +2010,14 @@ export default function JadwalView() {
                 >
                   {a.badge}
                 </span>
+                {a.contoh && (
+                  <span
+                    title="Agenda contoh — ikut terhapus lewat Hapus contoh"
+                    className="shrink-0 whitespace-nowrap rounded-full border-2 border-dashed border-black bg-white px-2 py-0.5 font-label text-[10px] font-extrabold uppercase tracking-wider text-brand-muted"
+                  >
+                    Contoh
+                  </span>
+                )}
               </div>
               <p className="pl-9 font-body text-sm text-brand-muted">{a.deskripsi}</p>
               <div className="flex items-center justify-between gap-2 pl-9 pt-1">
@@ -1499,13 +2070,13 @@ export default function JadwalView() {
               </span>
             </div>
             <span className="font-label text-xs font-bold text-brand-muted">
-              Total: {tugas.length} Kartu • {done} tuntas
+              Total: {aktif.length} Kartu • {done} tuntas{arsip.length > 0 ? ` • ${arsip.length} arsip` : ""}
             </span>
           </div>
 
           <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
                 {kolom.map((k) => {
-                  const isi = tugas.filter(
+                  const isi = aktif.filter(
                     (t) => t.status === k.status && cocokFilter(t)
                   );
                   const jumlah =
@@ -1544,7 +2115,7 @@ export default function JadwalView() {
                           <button
                             type="button"
                             onClick={() => setFormTerbuka(true)}
-                            aria-label="Tambah kartu To Do"
+                            aria-label="Tambah kartu Belum Dikerjakan"
                             className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-black bg-white text-brand-navy shadow-[2px_2px_0px_#000000] transition-all hover:bg-brand-yellow active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                           >
                             <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">
@@ -1554,11 +2125,33 @@ export default function JadwalView() {
                         )}
                       </header>
                       {isi.length === 0 && (
-                        <p className="rounded-lg border-2 border-dashed border-black/30 bg-white/70 p-3 text-center font-body text-xs text-brand-muted">
-                          {tugas.length === 0
-                            ? "Belum ada kartu. Tambah tugas pertama!"
-                            : "Tak ada agenda/task yang cocok — coba ubah filter atau pencarian."}
-                        </p>
+                        <div className="rounded-lg border-2 border-dashed border-black/30 bg-white/70 p-3 text-center">
+                          <p className="font-body text-xs text-brand-muted">
+                          {aktif.length === 0
+                            ? "Papan kosong — mulai dari nol, tambah tugas pertamamu, atau coba contoh dulu."
+                            : "Tak ada agenda/tugas yang cocok — coba ubah filter atau pencarian."}
+                          </p>
+                          {aktif.length === 0 && (
+                            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setFormTerbuka(true)}
+                                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border-[3px] border-black bg-brand-yellow px-4 font-label text-xs font-extrabold text-brand-navy shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                              >
+                                <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">add</span>
+                                Tambah tugas pertama
+                              </button>
+                              <button
+                                type="button"
+                                onClick={muatContoh}
+                                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border-[3px] border-black bg-white px-4 font-label text-xs font-extrabold text-brand-navy shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                              >
+                                <span aria-hidden className="material-symbols-outlined shrink-0 text-[18px] leading-none">science</span>
+                                Coba contoh
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
                       {isi.map(renderKartu)}
                     </section>
@@ -1607,6 +2200,177 @@ export default function JadwalView() {
           </div>
         </div>
       </div>
+
+      {/* Cari Semua Tugas — lintas sumber, record yang sama, tanpa salinan */}
+      <section aria-label="Cari semua tugas" className="mt-5 rounded-2xl border-[3px] border-black bg-brand-panel p-4 shadow-brutal">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-bold text-brand-navy">Cari Semua Tugas</h2>
+          <span className="rounded-full border-[3px] border-black bg-white px-2 py-0.5 font-label text-[11px] font-extrabold shadow-brutal-sm">
+            {hasilCari.length} Cocok
+          </span>
+        </div>
+        <p className="mt-1 font-body text-xs text-brand-muted">
+          Mencari di judul, catatan, sumber, status, prioritas, dan tenggat — semua sumber (Jadwal, Roadmap, Materi, Planner, Pribadi). Aksi di bawah mengubah tugas yang sama.
+        </p>
+        <label className="mt-3 flex h-12 items-center gap-2 rounded-xl border-[3px] border-black bg-white px-3 shadow-[3px_3px_0px_#000000] focus-within:bg-brand-paper">
+          <span aria-hidden className="material-symbols-outlined shrink-0 text-[20px] leading-none text-brand-muted">
+            search
+          </span>
+          <input
+            value={ccQ}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCcQ(e.target.value)}
+            placeholder="Cari semua tugas…"
+            className="w-full bg-transparent font-body text-sm text-brand-navy outline-none placeholder:text-brand-muted"
+            aria-label="Cari semua tugas"
+          />
+          {ccQ && (
+            <button
+              type="button"
+              onClick={() => setCcQ("")}
+              aria-label="Bersihkan pencarian semua tugas"
+              className="font-label text-xs font-bold text-brand-brick underline"
+            >
+              Hapus
+            </button>
+          )}
+        </label>
+        <div className="mt-2 flex flex-wrap items-center gap-2" role="group" aria-label="Kondisi pencarian">
+          {(["semua", "aktif", "selesai", "terlambat", "arsip"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setCcKondisi(k)}
+              aria-pressed={ccKondisi === k}
+              className={`shrink-0 rounded-full border-2 border-black px-3 py-1.5 font-label text-xs font-extrabold uppercase shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
+                ccKondisi === k ? "bg-brand-blue text-white" : "bg-white text-brand-navy hover:bg-brand-paper"
+              }`}
+            >
+              {k === "semua" ? "Semua" : k === "aktif" ? "Aktif" : k === "selesai" ? "Selesai" : k === "terlambat" ? "Terlambat" : "Arsip"}
+            </button>
+          ))}
+          {(ccKondisi !== "semua" || ccQ) && (
+            <button
+              type="button"
+              onClick={resetCari}
+              className="shrink-0 rounded-full border-2 border-black bg-brand-brick px-3 py-1.5 font-label text-xs font-extrabold uppercase text-white"
+            >
+              Atur Ulang
+            </button>
+          )}
+        </div>
+        {hasilCari.length === 0 ? (
+          <p className="mt-3 rounded-xl border-2 border-dashed border-black/30 bg-white p-3 text-center font-body text-xs text-brand-muted">
+            Tak ada tugas yang cocok — coba ubah kata kunci atau kondisi.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {hasilCari.map((h) => (
+              <li key={h.id} className="rounded-xl border-2 border-black bg-white px-3 py-2 shadow-[2px_2px_0px_#000000]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-body text-sm font-bold text-brand-navy">{h.judul}</span>
+                    <span className="mt-0.5 block font-body text-xs text-brand-muted">
+                      {h.sumber} • {h.status === "done" ? "Selesai" : h.status === "doing" ? "Dikerjakan" : "Belum Dikerjakan"} • {h.prioritas}{h.dueDate ? ` • ${h.dueDate}` : ""}{h.demo ? " • Demo" : ""}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {h.arsip ? (
+                      <button
+                        type="button"
+                        onClick={() => pulihkanHasilLintas(h.id)}
+                        className="h-9 rounded-full border-2 border-black bg-brand-yellow px-2.5 font-label text-[10px] font-extrabold uppercase text-black"
+                      >
+                        Pulihkan
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => geserHasilLintas(h.id, -1)}
+                          disabled={h.status === "todo"}
+                          aria-label={`Mundur: ${h.judul}`}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-black bg-white disabled:opacity-30"
+                        >
+                          <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">chevron_left</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => geserHasilLintas(h.id, 1)}
+                          disabled={h.status === "done"}
+                          aria-label={`Maju: ${h.judul}`}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-black bg-brand-blue text-white disabled:opacity-30"
+                        >
+                          <span aria-hidden className="material-symbols-outlined shrink-0 text-[16px] leading-none">chevron_right</span>
+                        </button>
+                      </>
+                    )}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Arsip — disembunyikan dari papan & statistik, bisa dipulihkan */}
+      <section aria-label="Arsip tugas" className="mt-5 rounded-2xl border-[3px] border-black bg-white p-4 shadow-brutal">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-bold text-brand-navy">Arsip</h2>
+          <span className="flex items-center gap-2">
+            <span className="rounded-full border-[3px] border-black bg-brand-panel px-2 py-0.5 font-label text-[11px] font-extrabold shadow-brutal-sm">
+              {arsip.length} Arsip
+            </span>
+            {arsip.length > 0 && (
+              <button
+                type="button"
+                onClick={hapusSemuaArsip}
+                className="h-9 rounded-full border-2 border-black bg-brand-brick px-2.5 font-label text-[10px] font-extrabold uppercase text-white"
+              >
+                Hapus semua
+              </button>
+            )}
+          </span>
+        </div>
+        <p className="mt-1 font-body text-xs text-brand-muted">
+          Tugas yang diarsipkan tidak dihitung di statistik dan tidak tampil di papan. Pulihkan untuk mengembalikan, atau hapus permanen bila benar-benar tak perlu.
+        </p>
+        {arsip.length === 0 ? (
+          <p className="mt-3 rounded-xl border-2 border-dashed border-black/30 bg-white p-3 text-center font-body text-xs text-brand-muted">
+            Arsip kosong — pakai tombol arsip pada kartu untuk menyingkirkan tugas tanpa menghapus.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {arsip.map((t) => (
+              <li key={t.id} className="rounded-xl border-2 border-black bg-brand-paper px-3 py-2 shadow-[2px_2px_0px_#000000]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-body text-sm font-bold text-brand-navy">{t.judul}</span>
+                    <span className="mt-0.5 block font-body text-xs text-brand-muted">
+                      {t.sumber === "roadmap" ? "Roadmap" : t.sumber === "materi" ? "Materi" : t.sumber === "pribadi" ? "Pribadi" : "Jadwal"} • {t.status === "done" ? "Selesai" : t.status === "doing" ? "Dikerjakan" : "Belum Dikerjakan"}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => pulihkanArsip(t.id)}
+                      className="h-9 rounded-full border-2 border-black bg-brand-yellow px-2.5 font-label text-[10px] font-extrabold uppercase text-black"
+                    >
+                      Pulihkan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => hapusPermanenArsip(t.id)}
+                      className="h-9 rounded-full border-2 border-black bg-brand-brick px-2.5 font-label text-[10px] font-extrabold uppercase text-white"
+                    >
+                      Hapus permanen
+                    </button>
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Form tambah tugas */}
       {formTerbuka && (
@@ -1675,7 +2439,7 @@ export default function JadwalView() {
                 </label>
                 <label className="block">
                   <span className="mb-1 block font-label text-xs font-extrabold uppercase text-brand-navy">
-                    Deadline (opsional)
+                    Tenggat (opsional)
                   </span>
                   <input
                     type="date"
@@ -1730,6 +2494,76 @@ export default function JadwalView() {
                     </button>
                   ))}
                 </div>
+              </fieldset>
+              <fieldset>
+                <legend className="mb-1 font-label text-xs font-extrabold uppercase text-brand-navy">
+                  Berulang
+                </legend>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Pola berulang">
+                  {(
+                    [
+                      ["tidak", "Sekali"],
+                      ["harian", "Harian"],
+                      ["mingguan", "Mingguan"],
+                      ["interval", "Tiap N hari"],
+                    ] as const
+                  ).map(([v, label]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setUlang(v)}
+                      aria-pressed={ulang === v}
+                      className={`rounded-full border-2 border-black px-3 py-2 font-label text-xs font-extrabold uppercase shadow-[2px_2px_0px_#000000] transition-all active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
+                        ulang === v
+                          ? "bg-brand-blue text-white"
+                          : "bg-white text-brand-navy hover:bg-brand-panel"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {ulang !== "tidak" && (
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    {ulang === "interval" && (
+                      <label className="block">
+                        <span className="mb-1 block font-label text-xs font-extrabold uppercase text-brand-navy">
+                          Tiap berapa hari
+                        </span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={365}
+                          value={ulangInterval}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setUlangInterval(e.target.value)
+                          }
+                          className="h-12 w-full rounded-xl border-[3px] border-black bg-white px-3 font-body text-sm text-brand-navy shadow-[3px_3px_0px_#000000] outline-none focus:bg-brand-paper"
+                        />
+                      </label>
+                    )}
+                    <label className="block">
+                      <span className="mb-1 block font-label text-xs font-extrabold uppercase text-brand-navy">
+                        Jumlah kejadian (2–31)
+                      </span>
+                      <input
+                        type="number"
+                        min={2}
+                        max={31}
+                        value={ulangJumlah}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setUlangJumlah(e.target.value)
+                        }
+                        className="h-12 w-full rounded-xl border-[3px] border-black bg-white px-3 font-body text-sm text-brand-navy shadow-[3px_3px_0px_#000000] outline-none focus:bg-brand-paper"
+                      />
+                    </label>
+                  </div>
+                )}
+                <p className="mt-1 font-body text-[11px] text-brand-muted">
+                  {ulang === "tidak"
+                    ? "Satu tugas biasa."
+                    : "Tenggat jadi tanggal mulai seri. Tiap kejadian tugas sendiri — selesaikan satu per satu."}
+                </p>
               </fieldset>
             </div>
             <div className="mt-5 flex gap-2">

@@ -158,7 +158,7 @@ export default function FlashcardsPage() {
   }
 
   return (
-    <ToolShell eyebrow="Hub / Alat" title="Flashcards" description="Ubah materi menjadi kartu depan-belakang. Klik kartu untuk membalik, tersimpan di browser." icon="🃏" badge={`${cards.length} kartu`} badgeTone="info">
+    <ToolShell eyebrow="Cademy / Alat" title="Flashcards" description="Ubah materi menjadi kartu depan-belakang. Klik kartu untuk membalik, tersimpan di browser." icon="🃏" badge={`${cards.length} kartu`} badgeTone="info">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="space-y-3">
           <Panel className="bg-white text-center">

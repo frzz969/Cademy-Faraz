@@ -100,7 +100,7 @@ export const tools: Tool[] = [
     status: "available",
     category: ["productivity", "study"],
     icon: "calendar_month",
-    meta: ["Kanban", "Countdown target", "Tersimpan lokal"],
+    meta: ["Kanban", "Hitung mundur target", "Tersimpan lokal"],
   },
   {
     slug: "quiz",
@@ -177,12 +177,12 @@ export const tools: Tool[] = [
     slug: "jadwal",
     name: "Jadwal & Task Board",
     description:
-      "Agenda bimbingan, deadline sidang, dan papan tugas skripsi (To Do, Sedang Dikerjakan, Selesai) dengan filter prioritas.",
+      "Agenda bimbingan, tenggat sidang, dan papan tugas skripsi (Belum Dikerjakan, Sedang Dikerjakan, Selesai) dengan filter prioritas.",
     status: "beta",
     category: ["study", "productivity"],
     icon: "view_kanban",
-    badge: "Kanban Board",
-    meta: ["To Do • Doing • Done", "Filter prioritas", "Tersimpan lokal"],
+    badge: "Papan Kanban",
+    meta: ["Belum • Sedang • Selesai", "Filter prioritas", "Tersimpan lokal"],
   },
 ];
 

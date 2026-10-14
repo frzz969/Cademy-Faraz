@@ -123,7 +123,7 @@ export default function QuizPage() {
         JSON.stringify({ materi, jumlah, tipe, soal: soal.slice(0, 30), jawab, mandiri })
       );
     } catch {
-      setInfo("Penyimpanan penuh — kurangi panjang materi atau tekan Reset untuk membersihkan simpanan lokal.");
+      setInfo("Penyimpanan penuh — kurangi panjang materi atau tekan Atur Ulang untuk membersihkan simpanan lokal.");
     }
   }, [materi, jumlah, tipe, soal, jawab, mandiri, ready]);
 
@@ -196,7 +196,7 @@ export default function QuizPage() {
   }).length;
 
   return (
-    <ToolShell eyebrow="Hub / Alat" title="Quiz Generator" description="Tempel materi kuliah → dapat soal pilihan ganda, benar/salah, dan esai + kunci otomatis. Template-based, tanpa AI server." icon="❓" badge="Template-based" badgeTone="info">
+    <ToolShell eyebrow="Cademy / Alat" title="Quiz Generator" description="Tempel materi kuliah → dapat soal pilihan ganda, benar/salah, dan esai + kunci otomatis. Template-based, tanpa AI server." icon="❓" badge="Template-based" badgeTone="info">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel className="space-y-3 bg-white">
           <h2 className="font-display text-lg font-bold">1. Materi</h2>
@@ -237,7 +237,7 @@ export default function QuizPage() {
                 <Button size="sm" variant="secondary" onClick={() => setShowKunci((v) => !v)}>{showKunci ? "Sembunyikan kunci" : "Tampilkan kunci"}</Button>
                 <Button size="sm" variant="secondary" onClick={salinHasil}>Salin hasil</Button>
                 <Button size="sm" variant="secondary" onClick={unduhHasil}>Unduh .txt</Button>
-                <Button size="sm" variant="secondary" onClick={reset}>Reset</Button>
+                <Button size="sm" variant="secondary" onClick={reset}>Atur Ulang</Button>
               </span>
             )}
           </Panel>

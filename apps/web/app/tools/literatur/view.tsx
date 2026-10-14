@@ -1115,7 +1115,7 @@ export default function LiteraturView() {
 
   return (
     <ToolShell
-      eyebrow="Hub / Alat"
+      eyebrow="Cademy / Alat"
       title="Pencari Jurnal"
       description="Cari artikel jurnal lewat OpenAlex + direktori Sinta, Garuda, DOAJ."
       icon="search"

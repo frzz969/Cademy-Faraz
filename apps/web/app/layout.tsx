@@ -4,7 +4,7 @@ import { BottomNav } from "../components/BottomNav";
 import { HeaderNav } from "../components/HeaderNav";
 
 export const metadata: Metadata = {
-  title: "Cademy — Tools Akademik Mahasiswa",
+  title: "Cademy — Alat Akademik Mahasiswa",
   description:
     "Satu tempat untuk sitasi, IPK, kuis, flashcards, pomodoro, dan lainnya. Gratis tanpa daftar.",
 };
@@ -30,24 +30,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   Cademy
                 </span>
                 <span className="font-display text-xl font-bold tracking-tight text-brand-navy">
-                  Tools Akademik
+                  Alat Akademik
                 </span>
               </span>
             </a>
             <HeaderNav />
             <div className="flex items-center gap-2">
-              <form action="/tools" method="get" role="search" aria-label="Pencarian tools" className="flex items-center gap-2">
+              <form action="/tools" method="get" role="search" aria-label="Pencarian alat" className="flex items-center gap-2">
                 <input
                   type="search"
                   name="q"
-                  placeholder="Cari tools…"
-                  aria-label="Cari tools"
+                  placeholder="Cari alat…"
+                  aria-label="Cari alat"
                   className="hidden h-10 w-32 rounded-full border-[3px] border-black bg-white px-3.5 text-xs font-bold text-brand-navy shadow-[2px_2px_0px_#000000] outline-none placeholder:text-brand-muted focus:bg-brand-paper sm:block lg:w-44"
                 />
                 <button
                   type="submit"
-                  aria-label="Cari tools"
-                  title="Cari tools"
+                  aria-label="Cari alat"
+                  title="Cari alat"
                   className="brutal-press flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-black bg-white text-brand-muted shadow-[2px_2px_0px_#000000] transition-colors hover:text-brand-navy focus:outline-none"
                 >
                   <span aria-hidden className="material-symbols-outlined text-[22px]">
@@ -99,7 +99,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 href="/tools"
                 className="rounded border-2 border-black bg-brand-blue px-2.5 py-1 text-white shadow-[2px_2px_0px_#000000] transition-colors hover:bg-brand-navy"
               >
-                Direktori Tools
+                Direktori Alat
               </a>
             </nav>
           </div>

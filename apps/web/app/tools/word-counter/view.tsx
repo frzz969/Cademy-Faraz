@@ -50,7 +50,7 @@ export default function WordCounterPage() {
   }
 
   return (
-    <ToolShell eyebrow="Hub / Alat" title="Word Counter" description="Hitung kata, karakter, kalimat, paragraf, estimasi waktu baca + skor keterbacaan. Bonus, 100% lokal." icon="🔤" badge="Bonus" badgeTone="info">
+    <ToolShell eyebrow="Cademy / Alat" title="Word Counter" description="Hitung kata, karakter, kalimat, paragraf, estimasi waktu baca + skor keterbacaan. Bonus, 100% lokal." icon="🔤" badge="Bonus" badgeTone="info">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <Panel className="space-y-2 bg-white lg:col-span-3">
           <textarea rows={12} value={text} onChange={(e) => setText(e.target.value)} placeholder="Tempel atau ketik teks di sini…" className="min-h-64 w-full rounded-xl border-[3px] border-black bg-brand-panel px-4 py-3 font-body text-sm outline-none focus:bg-white focus:ring-2 focus:ring-brand-blue" />

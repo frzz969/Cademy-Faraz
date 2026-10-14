@@ -158,7 +158,7 @@ export default function GpaPage() {
         JSON.stringify({ rows, skala, sksLalu, ipkLalu, target, sisaSks })
       );
     } catch {
-      showToast("Penyimpanan penuh — hapus sebagian data atau tekan Reset.");
+      showToast("Penyimpanan penuh — hapus sebagian data atau tekan Atur Ulang.");
     }
   }, [rows, skala, sksLalu, ipkLalu, target, sisaSks, ready, showToast]);
 
@@ -192,7 +192,7 @@ export default function GpaPage() {
   }
 
   function reset() {
-    if (!window.confirm("Reset semua input GPA ke awal? Data yang diisi akan hilang.")) return;
+    if (!window.confirm("Atur ulang semua input GPA ke awal? Data yang diisi akan hilang.")) return;
     setRows(defaultRows());
     setSkala("Umum / UNAS");
     setSksLalu("0");
@@ -233,7 +233,7 @@ export default function GpaPage() {
   const hasError = sksErrors.some(Boolean) || namaErrors.some(Boolean) || ipkLaluError !== "" || targetError !== "";
 
   return (
-    <ToolShell eyebrow="Hub / Alat" title="GPA Calculator" description="Hitung IP semester, IPK kumulatif, dan simulasi target Cumlaude. Semua di browser." icon="calculate" badge="Semester & Target" badgeTone="info">
+    <ToolShell eyebrow="Cademy / Alat" title="GPA Calculator" description="Hitung IP semester, IPK kumulatif, dan simulasi target Cumlaude. Semua di browser." icon="calculate" badge="Semester & Target" badgeTone="info">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <Panel className="space-y-3 bg-white lg:col-span-3">
           <div className="flex items-center justify-between">
@@ -289,7 +289,7 @@ export default function GpaPage() {
               </p>
               <span className="flex gap-2">
                 <Button size="sm" variant="secondary" onClick={salinHasil}>Salin hasil</Button>
-                <Button size="sm" variant="secondary" onClick={reset}>Reset</Button>
+                <Button size="sm" variant="secondary" onClick={reset}>Atur Ulang</Button>
               </span>
             </div>
           </Panel>

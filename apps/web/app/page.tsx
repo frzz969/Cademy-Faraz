@@ -4,9 +4,9 @@ import { categories, getPopularTools, tools } from "@cademy/tool-registry";
 import { CategoryPill } from "@cademy/ui";
 
 export const metadata: Metadata = {
-  title: "Cademy — Tools Akademik Gratis untuk Mahasiswa Indonesia",
+  title: "Cademy — Alat Akademik Gratis untuk Mahasiswa Indonesia",
   description:
-    "Direktori tools akademik gratis: generator sitasi APA/MLA, kalkulator IPK & nilai sidang, kuis, flashcards, pomodoro, dan checklist skripsi. 100% berjalan di browser, tanpa daftar.",
+    "Direktori alat akademik gratis: generator sitasi APA/MLA, kalkulator IPK & nilai sidang, kuis, flashcards, pomodoro, dan checklist skripsi. 100% berjalan di browser, tanpa daftar.",
 };
 
 const badgeCls: Record<string, string> = {
@@ -23,14 +23,14 @@ export default function HomePage() {
   const totalCategories = categories.length - 1;
   return (
     <div className="page-home w-full">
-      {/* HERO — academic_hub_homepage */}
+      {/* HERO — cademy_homepage */}
       <section aria-labelledby="hero-heading" className="mx-auto max-w-7xl px-4 py-8 sm:py-12 md:py-16">
         <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-12">
           <div className="order-2 flex flex-col items-start gap-4 lg:order-1 lg:col-span-7">
             <div className="inline-flex items-center gap-2 rounded-full border-[3px] border-black bg-[#FFD02B] px-3.5 py-1.5 shadow-[4px_4px_0px_#000000]">
               <span aria-hidden className="material-symbols-outlined text-[18px] text-[#000000]">auto_awesome</span>
               <span className="text-xs font-black uppercase tracking-wide text-[#000000]">
-                THE ALL-IN-ONE ACADEMIC SUITE
+                RANGKAIAN AKADEMIK SERBA BISA
               </span>
             </div>
             <h1
@@ -44,7 +44,7 @@ export default function HomePage() {
               , riset, dan kerja akademik sehari-hari.
             </h1>
             <p className="max-w-xl font-body text-base font-medium leading-relaxed text-[#4E7390] sm:text-lg">
-              Jelajahi tools serbaguna yang menyederhanakan penulisan, sitasi, nilai, dan analisis tanpa fitur berlebih.
+              Jelajahi alat serbaguna yang menyederhanakan penulisan, sitasi, nilai, dan analisis tanpa fitur berlebih.
             </p>
             <form action="/tools" method="get" className="mt-2 w-full rounded-2xl border-[3px] border-black bg-[#FFFFFF] p-3 shadow-[4px_4px_0px_#000000] sm:p-4">
               <div className="relative flex items-center">
@@ -55,7 +55,7 @@ export default function HomePage() {
                 </span>
                 <input
                   name="q"
-                  placeholder="Cari tools (mis. IPK, sitasi APA, pendeteksi AI)..."
+                  placeholder="Cari alat (mis. IPK, sitasi APA, pendeteksi AI)..."
                   className="w-full rounded-xl border-[3px] border-black bg-[#EAF5FC] py-3 pl-11 pr-24 font-body text-sm font-medium text-[#0B2E4B] placeholder:text-[#4E7390] focus:outline-none focus:ring-2 focus:ring-[#0E4A6E]"
                 />
                 <button
@@ -90,10 +90,10 @@ export default function HomePage() {
                     <span className="material-symbols-outlined text-[44px] text-[#0E4A6E]">school</span>
                   </span>
                   <p className="font-display text-2xl font-extrabold tracking-tight text-[#0B2E4B]">
-                    Students & researchers at work
+                    Mahasiswa & peneliti sedang bekerja
                   </p>
                   <p className="max-w-xs font-body text-sm font-medium text-[#4E7390]">
-                    Books, laptop, and glowing ideas — illustration placeholder
+                    Buku, laptop, dan ide cemerlang — ilustrasi
                   </p>
                 </div>
                 <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-lg border-[3px] border-black bg-[#FFD02B] px-3 py-1 shadow-[4px_4px_0px_#000000]">
@@ -104,7 +104,7 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="absolute -bottom-3 -left-3 hidden -rotate-3 rounded-full border-[3px] border-black bg-[#D9EDFA] px-3 py-1 font-body text-xs font-black text-[#0B2E4B] shadow-[4px_4px_0px_#000000] sm:block">
-                ZERO BS
+                TANPA RIBET
               </div>
             </div>
           </div>
@@ -116,19 +116,19 @@ export default function HomePage() {
         <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
             <div className="mb-2 inline-block rounded-md border-[3px] border-black bg-[#0E4A6E] px-3 py-1 font-body text-xs font-bold uppercase text-white shadow-[4px_4px_0px_#000000]">
-              Instant Utilities
+              Utilitas Instan
             </div>
             <h2 id="popular-tools-heading" className="flex items-center gap-2 font-display text-2xl font-extrabold tracking-tight text-[#0B2E4B] sm:text-3xl">
               <span aria-hidden className="material-symbols-outlined text-[32px] text-[#D93A2B]">local_fire_department</span>
-              Tools Populer
+              Alat Populer
             </h2>
             <p className="mt-1 font-body text-sm font-medium text-[#4E7390] sm:text-base">
-              Most used academic utilities by students & researchers worldwide.
+              Utilitas akademik yang paling sering dipakai mahasiswa & peneliti.
             </p>
           </div>
           <div className="text-right">
             <span className="rounded-full border-2 border-black bg-[#D9EDFA] px-3 py-1 font-body text-xs font-bold uppercase tracking-wider text-[#0B2E4B]">
-              Showing {popular.length} core tools
+              Menampilkan {popular.length} alat utama
             </span>
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function HomePage() {
             const isExternal = t.status === "external" && t.url && t.slug !== "ai-detector";
             const ctaPrimary = i === 0;
             const ctaLabel =
-              t.slug === "ai-detector" ? "Open" : t.slug === "citation" ? "Launch Tool" : t.slug === "gpa" ? "Calculate" : t.slug === "grade" ? "Check Grades" : "Buka";
+              t.slug === "ai-detector" ? "Buka" : t.slug === "citation" ? "Gunakan Alat" : t.slug === "gpa" ? "Hitung" : t.slug === "grade" ? "Cek Nilai" : "Buka";
             return (
               <article
                 key={t.slug}
@@ -149,7 +149,7 @@ export default function HomePage() {
                       <span aria-hidden className="material-symbols-outlined text-[28px] text-[#0E4A6E]">{t.icon}</span>
                     </div>
                     <span className={`rounded-full border-2 border-black px-2.5 py-1 text-[11px] font-black uppercase tracking-wider shadow-[2px_2px_0px_#000000] ${badgeCls[t.status] ?? badgeCls.available}`}>
-                      {t.badge ?? (t.status === "external" ? "Eksternal" : t.status === "beta" ? "Beta" : t.status === "coming-soon" ? "Segera Hadir" : "Tersedia")}
+                      {t.badge ?? (t.status === "external" ? "External" : t.status === "beta" ? "Beta" : t.status === "coming-soon" ? "Segera Hadir" : "Tersedia")}
                     </span>
                   </div>
                   <h3 className="mb-2 font-display text-xl font-bold text-[#0B2E4B]">
